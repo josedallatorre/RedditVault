@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "name": "C#: RedditVault [https]",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/RedditVault.csproj",
+            "launchConfigurationId": "TargetFramework=;https"
+        }
+    ]
+}
