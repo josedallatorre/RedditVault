@@ -19,11 +19,19 @@ namespace RedditVault.Pages.Posts
             _context = context;
         }
 
-        public IList<Post> Post { get;set; } = default!;
+        public IList<Post> Post { get; set; } = default!;
+        [BindProperty(SupportsGet = true)]
+        public string? SearchString { get; set; }
 
         public async Task OnGetAsync()
         {
-            Post = await _context.Post.ToListAsync();
+            var posts = from p in _context.Post
+                         select p;
+            if (!string.IsNullOrEmpty(SearchString))
+            {
+                posts = posts.Where(s => s.Title.Contains(SearchString));
+            }
+            Post = await posts.ToListAsync();
         }
     }
 }
