@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using RazorPagesMovie.Models;
+using RedditVault.Models;
 
 namespace RazorPagesPost.Data
 {
@@ -14,6 +14,6 @@ namespace RazorPagesPost.Data
         {
         }
 
-        public DbSet<RazorPagesMovie.Models.Post> Post { get; set; } = default!;
+        public DbSet<RedditVault.Models.Post> Post { get; set; } = default!;
     }
 }

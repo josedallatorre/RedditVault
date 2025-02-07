@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace RazorPagesMovie.Models;
+namespace RedditVault.Models;
 
 public class Post
 {
