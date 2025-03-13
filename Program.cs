@@ -36,4 +36,13 @@ app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
 
+var accessToken = "";
+var client = new HttpClient();
+client.DefaultRequestHeaders.Add("User-Agent","RedditTest/1.0");
+var request = new HttpRequestMessage(HttpMethod.Get, "https://oauth.reddit.com/api/v1/me");
+request.Headers.Add("Authorization", $"Bearer {accessToken}");
+var response = await client.SendAsync(request);
+response.EnsureSuccessStatusCode();
+Console.WriteLine(await response.Content.ReadAsStringAsync());
+Console.WriteLine("bye");
 app.Run();
