@@ -29,4 +29,12 @@ public class PostService {
         postRepository.save(post);
         System.out.println(post);
     }
+
+    public void deletePost(Long postId) {
+        boolean exists = postRepository.existsById(postId);
+        if (!exists) {
+            throw new IllegalStateException("Post with id "+ postId + " does not exist");
+        }
+        postRepository.deleteById(postId);
+    }
 }

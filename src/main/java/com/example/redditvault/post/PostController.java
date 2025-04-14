@@ -25,4 +25,9 @@ public class PostController {
         postService.addNewPost(post);
     }
 
+    @DeleteMapping(path = "{postId}")
+    public void deletePost(@PathVariable("postId") Long postId) {
+        postService.deletePost(postId);
+    }
+
 }
