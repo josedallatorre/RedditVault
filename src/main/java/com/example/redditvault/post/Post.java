@@ -15,8 +15,8 @@ public class Post {
             strategy = GenerationType.SEQUENCE,
             generator = "post_sequence"
     )
-    private String author;
     private Long id;
+    private String author;
     private String title;
 
     public Post() {}
@@ -24,6 +24,10 @@ public class Post {
     public Post(String author, Long id, String title) {
         this.author = author;
         this.id = id;
+        this.title = title;
+    }
+    public Post(String author, String title) {
+        this.author = author;
         this.title = title;
     }
 
