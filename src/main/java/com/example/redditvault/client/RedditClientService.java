@@ -70,7 +70,6 @@ public class RedditClientService {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
             return response.body(); // You can return token JSON or extract it
 
         } catch (Exception e) {
@@ -82,6 +81,24 @@ public class RedditClientService {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(RedditProperties.ME_URL))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            return response.body();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Failed to fetch user info: " + e.getMessage();
+        }
+    }
+    public String getUserSaved(String accessToken) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI(RedditProperties.SAVED_URL))
                     .header("Authorization", "Bearer " + accessToken)
                     .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
                     .GET()
