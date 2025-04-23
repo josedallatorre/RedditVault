@@ -24,13 +24,9 @@ public class RedditController {
         this.redditClientService = redditClientService;
     }
 
-
      @GetMapping(path = "/auth")
-    public ResponseEntity<Void> getAuth() {
-         String url = redditClientService.getAuthUrl();
-         HttpHeaders headers = new HttpHeaders();
-         headers.setLocation(URI.create(url));
-         return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    public ResponseEntity<String> getAuth() {
+         return redditClientService.getAuthUrl();
      }
 
      @GetMapping(path = "oauth/callback")

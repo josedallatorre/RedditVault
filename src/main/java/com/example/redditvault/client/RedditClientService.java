@@ -1,5 +1,8 @@
 package com.example.redditvault.client;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -40,15 +43,14 @@ public class RedditClientService {
         //return r.getCode("ciao");
         return "";
     }
-    public String getAuthUrl(){
+    public ResponseEntity<String> getAuthUrl(){
         String state = "prova";
         String url = String.format(
                 redditProperties.getUserAuthUrl(state)
-                /*"https://ssl.reddit.com/api/v1/authorize?client_id=%s&response_type=code&state=randomstate&redirect_uri=%s&duration=temporary&scope=read",
-                redditProperties.getClientId(),
-                redditProperties.getRedirectUri()*/
         );
-        return url;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(URI.create(url));
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
     public String getTokenUrl(){
@@ -68,7 +70,7 @@ public class RedditClientService {
                     "&redirect_uri=" + redditProperties.getRedirectUri();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI("https://www.reddit.com/api/v1/access_token"))
+                    .uri(new URI(RedditProperties.OAUTH_TOKEN_URL))
                     .header("Authorization", "Basic " + encoded)
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(HttpRequest.BodyPublishers.ofString(formData))
