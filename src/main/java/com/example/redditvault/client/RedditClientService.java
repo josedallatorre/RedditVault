@@ -1,10 +1,17 @@
 package com.example.redditvault.client;
 
 import org.springframework.stereotype.Service;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 @Service
 public class RedditClientService {
     private final RedditProperties redditProperties;
+    private final HttpClient client = HttpClient.newHttpClient();
 
     public RedditClientService(RedditProperties redditProperties) {
         this.redditProperties = redditProperties;
@@ -42,5 +49,38 @@ public class RedditClientService {
                 redditProperties.getRedirectUri()*/
         );
         return url;
+    }
+
+    public String getTokenUrl(){
+        String state = "prova";
+        String url = String.format(
+                RedditProperties.OAUTH_TOKEN_URL
+        );
+        return url;
+    }
+    public String exchangeCodeForToken(String code){
+        try {
+            String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
+            String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+
+            String formData = "grant_type=authorization_code" +
+                    "&code=" + code +
+                    "&redirect_uri=" + redditProperties.getRedirectUri();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI("https://www.reddit.com/api/v1/access_token"))
+                    .header("Authorization", "Basic " + encoded)
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(formData))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            return response.body(); // You can return token JSON or extract it
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Failed to exchange code for token: " + e.getMessage();
+        }
     }
 }

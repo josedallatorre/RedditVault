@@ -8,7 +8,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.Authenticator;
+import java.net.HttpURLConnection;
+import java.net.PasswordAuthentication;
 import java.net.URI;
+import java.net.http.HttpClient;
 
 @RestController
 public class RedditController {
@@ -29,7 +33,7 @@ public class RedditController {
      }
 
      @GetMapping(path = "oauth/callback")
-    public void oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
-        System.out.println(code + " " + state);
+    public String oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
+         return redditClientService.exchangeCodeForToken(code);
      }
 }
