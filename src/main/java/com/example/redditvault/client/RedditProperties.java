@@ -22,6 +22,7 @@ public class RedditProperties {
     // Step 3. Get token
     public static final String OAUTH_TOKEN_URL = "https://ssl.reddit.com/api/v1/access_token";
 
+    public static final String ME_URL = "https://oauth.reddit.com/api/v1/me";
 
     // I think it is easier to create 2 reddit apps (one with 127.0.0.1 redirect URI)
     private String clientId;

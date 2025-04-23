@@ -53,14 +53,7 @@ public class RedditClientService {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
-    public String getTokenUrl(){
-        String state = "prova";
-        String url = String.format(
-                RedditProperties.OAUTH_TOKEN_URL
-        );
-        return url;
-    }
-    public String exchangeCodeForToken(String code){
+    public String exchangeCodeForToken(String code, String state){
         try {
             String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
             String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
@@ -88,7 +81,7 @@ public class RedditClientService {
     public String getUserInfo(String accessToken) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI("https://oauth.reddit.com/api/v1/me"))
+                    .uri(new URI(RedditProperties.ME_URL))
                     .header("Authorization", "Bearer " + accessToken)
                     .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
                     .GET()

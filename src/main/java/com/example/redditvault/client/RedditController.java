@@ -23,7 +23,7 @@ public class RedditController {
 
      @GetMapping(path = "oauth/callback")
     public String oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
-         return redditClientService.exchangeCodeForToken(code);
+         return redditClientService.exchangeCodeForToken(code, state);
      }
 
     @GetMapping("/me")
