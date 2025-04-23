@@ -83,4 +83,23 @@ public class RedditClientService {
             return "Failed to exchange code for token: " + e.getMessage();
         }
     }
+    public String getUserInfo(String accessToken) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI("https://oauth.reddit.com/api/v1/me"))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            return response.body();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Failed to fetch user info: " + e.getMessage();
+        }
+    }
+
 }
