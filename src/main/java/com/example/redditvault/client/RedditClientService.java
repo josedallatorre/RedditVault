@@ -1,5 +1,6 @@
 package com.example.redditvault.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +16,11 @@ import java.util.Base64;
 public class RedditClientService {
     private final RedditProperties redditProperties;
     private final HttpClient client = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper;
 
-    public RedditClientService(RedditProperties redditProperties) {
+    public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper) {
         this.redditProperties = redditProperties;
+        this.objectMapper = objectMapper;
     }
 
     public String getMe(){
@@ -95,8 +98,7 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public String getUserSaved(String accessToken) {
-        try {
+    public RedditResponse getUserSaved(String accessToken)throws Exception {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(RedditProperties.SAVED_URL))
                     .header("Authorization", "Bearer " + accessToken)
@@ -106,12 +108,8 @@ public class RedditClientService {
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            return response.body();
+            return objectMapper.readValue(response.body(), RedditResponse.class);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Failed to fetch user info: " + e.getMessage();
-        }
     }
 
 }

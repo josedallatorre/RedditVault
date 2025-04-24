@@ -38,14 +38,10 @@ public class RedditController {
         }
     }
     @GetMapping("/saved")
-    public ResponseEntity<String> getUserSaved(@RequestHeader("Authorization") String bearerToken) {
-        try {
-            String token = bearerToken.replace("Bearer ", "").trim();
-            String userJson = redditClientService.getUserSaved(token);
-            return ResponseEntity.ok(userJson);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
+    public RedditResponse getUserSaved(@RequestHeader("Authorization") String bearerToken)throws Exception {
+        String token = bearerToken.replace("Bearer ", "").trim();
+        return redditClientService.getUserSaved(token);
+        //return ResponseEntity.ok(userJson);
     }
+
 }
