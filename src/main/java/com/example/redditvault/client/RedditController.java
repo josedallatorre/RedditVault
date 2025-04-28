@@ -43,8 +43,8 @@ public class RedditController {
         //return ResponseEntity.ok(userJson);
     }
     @PostMapping("download")
-    public void downloadRedditMedia(@RequestBody String urlStr, String file) throws IOException {
-        redditClientService.download(urlStr, file);
+    public void downloadRedditMedia(@RequestBody DownloadRequest request) throws IOException {
+        redditClientService.download(request.getUrl(), request.getFilename());
     }
 
 }
