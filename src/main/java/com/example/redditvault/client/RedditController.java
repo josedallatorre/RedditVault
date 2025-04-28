@@ -44,6 +44,7 @@ public class RedditController {
     }
     @PostMapping("download")
     public void downloadRedditMedia(@RequestBody String urlStr, String file) throws IOException {
-
+        redditClientService.download(urlStr, file);
+    }
 
 }
