@@ -5,7 +5,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
+import java.io.BufferedInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -113,4 +118,17 @@ public class RedditClientService {
 
     }
 
+    public void download(String urlStr, String file)throws IOException {
+        URL url = new URL(urlStr);
+        BufferedInputStream bis = new BufferedInputStream(url.openStream());
+        FileOutputStream fis = new FileOutputStream(file);
+        byte[] buffer = new byte[1024];
+        int count=0;
+        while((count = bis.read(buffer,0,1024)) != -1)
+        {
+            fis.write(buffer, 0, count);
+        }
+        fis.close();
+        bis.close();
+    }
 }
