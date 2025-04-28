@@ -120,15 +120,14 @@ public class RedditClientService {
 
     public void download(String urlStr, String file)throws IOException {
         URL url = new URL(urlStr);
-        BufferedInputStream bis = new BufferedInputStream(url.openStream());
-        FileOutputStream fis = new FileOutputStream(file);
-        byte[] buffer = new byte[1024];
-        int count=0;
-        while((count = bis.read(buffer,0,1024)) != -1)
-        {
-            fis.write(buffer, 0, count);
+        try (BufferedInputStream bis = new BufferedInputStream(url.openStream());
+             FileOutputStream fis = new FileOutputStream(file)) {
+
+            byte[] buffer = new byte[1024];
+            int count;
+            while ((count = bis.read(buffer)) != -1) {
+                fis.write(buffer, 0, count);
+            }
         }
-        fis.close();
-        bis.close();
     }
 }
