@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
+import java.util.List;
 
 
 @RestController
@@ -43,8 +44,9 @@ public class RedditController {
         //return ResponseEntity.ok(userJson);
     }
     @PostMapping("download")
-    public void downloadRedditMedia(@RequestBody DownloadRequest request) throws IOException {
-        redditClientService.download(request.getUrl(), request.getFilename());
+    public void downloadRedditMedia(@RequestBody List<DownloadRequest> requests) throws IOException {
+        for  (DownloadRequest request : requests) {
+            redditClientService.download(request.getUrl(), request.getFilename());
+        }
     }
-
 }
