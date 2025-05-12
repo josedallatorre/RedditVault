@@ -1,10 +1,12 @@
 package com.example.redditvault.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
@@ -15,18 +17,25 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class RedditClientService {
     private final RedditProperties redditProperties;
     private final HttpClient client = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper;
+    private final WebClient webClient = WebClient.builder()
+
+            .build();
 
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
     }
+
 
     public String getMe(){
 //        RestTemplate restTemplate = new RestTemplate();
@@ -103,9 +112,9 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public RedditResponse getUserSaved(String accessToken)throws Exception {
+    public RedditResponse getUserSaved(String accessToken, String username)throws Exception {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(RedditProperties.SAVED_URL))
+                    .uri(new URI(String.format("https://oauth.reddit.com/user/%s/saved", username)))
                     .header("Authorization", "Bearer " + accessToken)
                     .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
                     .GET()
@@ -118,6 +127,53 @@ public class RedditClientService {
 
     }
 
+    public List<DownloadRequest> scrapeMediaFromPost(String redditPostUrl) {
+        List<DownloadRequest> mediaItems = new ArrayList<>();
+
+        String jsonUrl = redditPostUrl + ".json";
+
+        String json = webClient.get()
+                .uri(jsonUrl)
+                .header("User-Agent", "Mozilla/5.0")
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(); // blocking because scrape must finish before download
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(json);
+
+            JsonNode postData = root.get(0).get("data").get("children").get(0).get("data");
+
+            String url = postData.get("url").asText();
+            boolean isVideo = postData.get("is_video").asBoolean();
+
+            if (isImage(url)) {
+                String filename = generateFilename(url);
+                mediaItems.add(new DownloadRequest(url, filename));
+            } else if (isVideo) {
+                JsonNode media = postData.get("media");
+                if (media != null && media.get("reddit_video") != null) {
+                    String videoUrl = media.get("reddit_video").get("fallback_url").asText();
+                    String filename = generateFilename(videoUrl);
+                    mediaItems.add(new DownloadRequest(videoUrl, filename));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error scraping Reddit post: " + e.getMessage());
+        }
+
+        return mediaItems;
+    }
+
+    private boolean isImage(String url) {
+        return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
+    }
+
+    private String generateFilename(String url) {
+        String extension = url.substring(url.lastIndexOf("."));
+        return UUID.randomUUID().toString() + extension;
+    }
     public void download(String urlStr, String file)throws IOException {
         URL url = new URL(urlStr);
         try (BufferedInputStream bis = new BufferedInputStream(url.openStream());
