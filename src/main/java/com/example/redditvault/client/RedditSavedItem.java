@@ -1,5 +1,6 @@
 package com.example.redditvault.client;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
@@ -11,7 +12,16 @@ public class RedditSavedItem {
     private String author_fullname;
     private boolean saved;
     @JsonProperty("secure_media")
-    private List<RedditMedia> secure_media;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private RedditMedia secure_media;
+
+    public RedditMedia getSecure_media() {
+        return secure_media;
+    }
+
+    public void setSecure_media(RedditMedia secure_media) {
+        this.secure_media = secure_media;
+    }
 
     // Getters and setters
     public String getTitle() {
