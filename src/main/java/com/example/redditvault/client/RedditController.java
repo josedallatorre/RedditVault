@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -60,17 +63,28 @@ public class RedditController {
     }
 
     @PostMapping("/scrape")
-    public String scrapeAndDownload(@RequestBody String postUrl) throws IOException {
-        System.out.println(postUrl);
-        ObjectMapper mapper = new ObjectMapper();
-        Post post = mapper.readValue(postUrl, Post.class);
-        System.out.println(post.getUrl());
-        List<DownloadRequest> mediaItems = redditClientService.scrapeMediaFromPost(post.getUrl());
+    public String scrapeAndDownload(@RequestBody List<Post> posts) throws FileNotFoundException {
+        List<DownloadRequest> allMediaItems = new ArrayList<>();
 
-        for (DownloadRequest item : mediaItems) {
-            redditClientService.download(item.getUrl(), item.getFilename());
+        for (Post post : posts) {
+            List<DownloadRequest> mediaItems = redditClientService.scrapeMediaFromPost(post.getUrl());
+            allMediaItems.addAll(mediaItems);
         }
 
-        return "Scraped and downloaded " + mediaItems.size() + " items.";
+        CompletableFuture.allOf(
+                allMediaItems.stream()
+                        .map(item -> CompletableFuture.runAsync(() -> {
+                            try {
+                                redditClientService.download(item.getUrl(), item.getFilename().split("\\?")[0]);
+                            } catch (FileNotFoundException e) {
+                                System.err.println("Skipped (not found): " + item.getUrl());
+                            }  catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }))
+                        .toArray(CompletableFuture[]::new)
+        ).join();
+
+        return "Scraped and downloaded " + allMediaItems.size() + " items.";
     }
 }
