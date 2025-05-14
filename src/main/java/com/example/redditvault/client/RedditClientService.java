@@ -7,16 +7,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.io.BufferedInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -129,16 +133,40 @@ public class RedditClientService {
 
     public List<DownloadRequest> scrapeMediaFromPost(String redditPostUrl) {
         List<DownloadRequest> mediaItems = new ArrayList<>();
-
         String jsonUrl = redditPostUrl + ".json";
 
-        String json = webClient.get()
-                .uri(jsonUrl)
-                .header("User-Agent", "Mozilla/5.0")
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(); // blocking because scrape must finish before download
+        String json = null;
+        int attempt = 0;
+        while (attempt < 3) { // Retry 3 times
+            try {
+                json = webClient.get()
+                        .uri(jsonUrl)
+                        .header("User-Agent", "Mozilla/5.0")
+                        .retrieve()
+                        .onStatus(
+                                status -> status.value() == 429,
+                                response -> {
+                                    System.err.println("429 Too Many Requests: " + jsonUrl);
+                                    // Retry after a delay
+                                    return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
+                                            .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
+                                }
+                        )
+                        .bodyToMono(String.class)
+                        .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
+                        .block(); // blocking because scrape must finish before download
+                break; // If successful, exit the loop
+            } catch (Exception e) {
+                attempt++;
+                if (attempt >= 3) {
+                    System.err.println("Failed to retrieve post JSON after 3 attempts: " + e.getMessage());
+                    return mediaItems; // return empty if error occurs after 3 retries
+                }
+                System.err.println("Retrying after error: " + e.getMessage());
+            }
+        }
 
+        // Process the retrieved JSON if the request was successful
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(json);
@@ -160,11 +188,13 @@ public class RedditClientService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error scraping Reddit post: " + e.getMessage());
+            System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
         }
 
         return mediaItems;
     }
+
+
 
     private boolean isImage(String url) {
         return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
@@ -174,9 +204,19 @@ public class RedditClientService {
         String extension = url.substring(url.lastIndexOf("."));
         return UUID.randomUUID().toString() + extension;
     }
-    public void download(String urlStr, String file)throws IOException {
+    public void download(String urlStr, String file) throws IOException {
         URL url = new URL(urlStr);
-        try (BufferedInputStream bis = new BufferedInputStream(url.openStream());
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+            throw new FileNotFoundException("404 Not Found: " + urlStr);
+        } else if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new IOException("Failed to download: HTTP " + responseCode + " for " + urlStr);
+        }
+
+        try (BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
              FileOutputStream fis = new FileOutputStream(file)) {
 
             byte[] buffer = new byte[1024];
@@ -184,6 +224,8 @@ public class RedditClientService {
             while ((count = bis.read(buffer)) != -1) {
                 fis.write(buffer, 0, count);
             }
+        } finally {
+            connection.disconnect();
         }
     }
 }
