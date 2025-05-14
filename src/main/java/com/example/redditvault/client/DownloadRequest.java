@@ -6,6 +6,11 @@ public class DownloadRequest {
     private String filename;
     private String url;
 
+    public DownloadRequest(String url, String filename) {
+        this.url = url;
+        this.filename = filename;
+    }
+
     public String getUrl() {
         return url;
     }
