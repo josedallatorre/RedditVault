@@ -5,11 +5,11 @@ import './App.css';
 
 function App() {
   const [data, setData] = useState(null);
-  const token = localStorage.getItem('token')
+  const token = ""
 
   useEffect(() => {
     fetch('http://localhost:8080/me',{
-      method: 'POST',
+      method: 'GET',
       headers: {
         'Content-type': 'application/json',
         'Authorization': `Bearer ${token}`, // notice the Bearer before your token
