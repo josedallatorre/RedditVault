@@ -131,22 +131,25 @@ public class RedditClientService {
 
     }
 
-    public List<DownloadRequest> scrapeMediaFromPost(String redditPostUrl) {
+    public List<DownloadRequest> scrapeMediaFromPost(String accessToken,String redditPostUrl) {
         List<DownloadRequest> mediaItems = new ArrayList<>();
         String jsonUrl = redditPostUrl + ".json";
 
         String json = null;
         int attempt = 0;
-        while (attempt < 3) { // Retry 3 times
-            try {
+        try {
                 json = webClient.get()
                         .uri(jsonUrl)
+                        .header("Authorization", "Bearer " + accessToken)
                         .header("User-Agent", "Mozilla/5.0")
+
+                        //.doOnSuccess(clientResponse -> System.out.println("clientResponse.statusCode() = " + clientResponse.statusCode()))
                         .retrieve()
                         .onStatus(
                                 status -> status.value() == 429,
                                 response -> {
                                     System.err.println("429 Too Many Requests: " + jsonUrl);
+                                    System.err.println(response.headers().toString());
                                     // Retry after a delay
                                     return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
                                             .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
@@ -155,16 +158,10 @@ public class RedditClientService {
                         .bodyToMono(String.class)
                         .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
                         .block(); // blocking because scrape must finish before download
-                break; // If successful, exit the loop
+
             } catch (Exception e) {
-                attempt++;
-                if (attempt >= 3) {
-                    System.err.println("Failed to retrieve post JSON after 3 attempts: " + e.getMessage());
-                    return mediaItems; // return empty if error occurs after 3 retries
-                }
                 System.err.println("Retrying after error: " + e.getMessage());
             }
-        }
 
         // Process the retrieved JSON if the request was successful
         try {
