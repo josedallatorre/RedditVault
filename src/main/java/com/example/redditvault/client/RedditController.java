@@ -30,6 +30,7 @@ public class RedditController {
          return redditClientService.exchangeCodeForToken(code, state);
      }
 
+    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping("/me")
     public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String bearerToken) {
         try {
@@ -63,11 +64,11 @@ public class RedditController {
     }
 
     @PostMapping("/scrape")
-    public String scrapeAndDownload(@RequestBody List<Post> posts) throws FileNotFoundException {
+    public String scrapeAndDownload(@RequestHeader("Authorization") String bearerToken,@RequestBody List<Post> posts) throws FileNotFoundException {
         List<DownloadRequest> allMediaItems = new ArrayList<>();
 
         for (Post post : posts) {
-            List<DownloadRequest> mediaItems = redditClientService.scrapeMediaFromPost(post.getUrl());
+            List<DownloadRequest> mediaItems = redditClientService.scrapeMediaFromPost(bearerToken, post.getUrl());
             allMediaItems.addAll(mediaItems);
         }
 
