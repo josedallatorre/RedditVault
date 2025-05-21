@@ -1,6 +1,4 @@
 import React, {useState, useEffect} from 'react';
-import logo from './logo.svg';
-import './App.css';
 
 type RedditUser = {
   name: string;
@@ -12,8 +10,8 @@ type RedditUser = {
 };
 
 
-function profile() {
-  const token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IlNIQTI1NjpzS3dsMnlsV0VtMjVmcXhwTU40cWY4MXE2OWFFdWFyMnpLMUdhVGxjdWNZIiwidHlwIjoiSldUIn0.eyJzdWIiOiJ1c2VyIiwiZXhwIjoxNzQ3ODM5NTI4LjU1NTAyNCwiaWF0IjoxNzQ3NzUzMTI4LjU1NTAyMywianRpIjoiQ1RvN0FEVlFiTzJlNlBzOWxvUUVDeWRSX1JkaWZBIiwiY2lkIjoidTBhUmZ5c2ZETmtCdEJQN0xVaWVnUSIsImxpZCI6InQyX2N3YzUxZThoIiwiYWlkIjoidDJfY3djNTFlOGgiLCJsY2EiOjE2MjQ0NzcyNTgwMDAsInNjcCI6ImVKeUtWc3BNU2MwcnlTeXBWTkpSeXNnc0xza3ZxbFNLQlFRQUFQX19Xam9INlEiLCJyY2lkIjoiN3A2cUNxWUNsNUN5Yi04NXhyaTl4Wnc3SzZkR2h4eU1MVnh0M0wxdkJVVSIsImZsbyI6OH0.hmSzWsheujuj0cFM52ixnBu4vHoVgaCkabaOy_kD1eAYG9SVBBX-CBnGI2L6-JSsFTsjiBff_FF_wJ5cMxxMdkHKn8iuQ57LHQqLR97WBpurd5DSfiwk3hy3fNHU3KQYYyanX90x9YtWZ5q_uQElgbGkFth8u5BHdbP2JzT0nsYxmyJTc5hycaVlIB3GVWgjEqvT9wifGiSHV4Hv3SqZZNAjTgPFoDERWI4WRILncSh91NVRgYMF6grJl6e13B4jA-nqc55uIuTiKQZQwNaRKMfl0UQ1EhBBXsWQI6OvmnrvCBi7-ECzOBmztvm-UgmpPUeQ1GtkwfFml_wYBg892w"
+function Profile() {
+  const token = ""
   const [user, setUser] = useState<RedditUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,4 +61,4 @@ function profile() {
   );
 }
 
-export default profile;
+export default Profile;
