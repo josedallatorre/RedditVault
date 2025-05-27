@@ -1,24 +1,45 @@
 package com.example.redditvault.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+import java.io.BufferedInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class RedditClientService {
     private final RedditProperties redditProperties;
     private final HttpClient client = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper;
+    private final WebClient webClient = WebClient.builder()
 
-    public RedditClientService(RedditProperties redditProperties) {
+            .build();
+
+    public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper) {
         this.redditProperties = redditProperties;
+        this.objectMapper = objectMapper;
     }
+
 
     public String getMe(){
 //        RestTemplate restTemplate = new RestTemplate();
@@ -70,7 +91,6 @@ public class RedditClientService {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
             return response.body(); // You can return token JSON or extract it
 
         } catch (Exception e) {
@@ -96,5 +116,113 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
+    public RedditResponse getUserSaved(String accessToken, String username)throws Exception {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI(String.format("https://oauth.reddit.com/user/%s/saved", username)))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
+                    .GET()
+                    .build();
 
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            System.out.println(response.body());
+            return objectMapper.readValue(response.body(), RedditResponse.class);
+
+    }
+
+    public List<DownloadRequest> scrapeMediaFromPost(String accessToken,String redditPostUrl) {
+        List<DownloadRequest> mediaItems = new ArrayList<>();
+        String jsonUrl = redditPostUrl + ".json";
+
+        String json = null;
+        int attempt = 0;
+        try {
+                json = webClient.get()
+                        .uri(jsonUrl)
+                        .header("Authorization", "Bearer " + accessToken)
+                        .header("User-Agent", "Mozilla/5.0")
+
+                        //.doOnSuccess(clientResponse -> System.out.println("clientResponse.statusCode() = " + clientResponse.statusCode()))
+                        .retrieve()
+                        .onStatus(
+                                status -> status.value() == 429,
+                                response -> {
+                                    System.err.println("429 Too Many Requests: " + jsonUrl);
+                                    System.err.println(response.headers().toString());
+                                    // Retry after a delay
+                                    return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
+                                            .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
+                                }
+                        )
+                        .bodyToMono(String.class)
+                        .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
+                        .block(); // blocking because scrape must finish before download
+
+            } catch (Exception e) {
+                System.err.println("Retrying after error: " + e.getMessage());
+            }
+
+        // Process the retrieved JSON if the request was successful
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(json);
+
+            JsonNode postData = root.get(0).get("data").get("children").get(0).get("data");
+
+            String url = postData.get("url").asText();
+            boolean isVideo = postData.get("is_video").asBoolean();
+
+            if (isImage(url)) {
+                String filename = generateFilename(url);
+                mediaItems.add(new DownloadRequest(url, filename));
+            } else if (isVideo) {
+                JsonNode media = postData.get("media");
+                if (media != null && media.get("reddit_video") != null) {
+                    String videoUrl = media.get("reddit_video").get("fallback_url").asText();
+                    String filename = generateFilename(videoUrl);
+                    mediaItems.add(new DownloadRequest(videoUrl, filename));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
+        }
+
+        return mediaItems;
+    }
+
+
+
+    private boolean isImage(String url) {
+        return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
+    }
+
+    private String generateFilename(String url) {
+        String extension = url.substring(url.lastIndexOf("."));
+        return UUID.randomUUID().toString() + extension;
+    }
+    public void download(String urlStr, String file) throws IOException {
+        URL url = new URL(urlStr);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+            throw new FileNotFoundException("404 Not Found: " + urlStr);
+        } else if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new IOException("Failed to download: HTTP " + responseCode + " for " + urlStr);
+        }
+
+        try (BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
+             FileOutputStream fis = new FileOutputStream(file)) {
+
+            byte[] buffer = new byte[1024];
+            int count;
+            while ((count = bis.read(buffer)) != -1) {
+                fis.write(buffer, 0, count);
+            }
+        } finally {
+            connection.disconnect();
+        }
+    }
 }
