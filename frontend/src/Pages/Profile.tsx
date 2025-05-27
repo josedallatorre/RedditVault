@@ -11,7 +11,7 @@ type RedditUser = {
 
 
 function Profile() {
-  const token = ""
+  const token = "";
   const [user, setUser] = useState<RedditUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
