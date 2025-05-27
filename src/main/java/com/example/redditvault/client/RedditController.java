@@ -42,10 +42,13 @@ public class RedditController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/saved")
-    public RedditResponse getUserSaved(@RequestHeader("Authorization") String bearerToken, @RequestParam("username") String username)throws Exception {
+    public RedditResponse getUserSaved(@RequestHeader("Authorization") String bearerToken, @RequestBody User username)throws Exception {
         String token = bearerToken.replace("Bearer ", "").trim();
-        return redditClientService.getUserSaved(token, username);
+        String name = username.getUsername();
+        return redditClientService.getUserSaved(token, name);
         //return ResponseEntity.ok(userJson);
     }
     @PostMapping("download")
