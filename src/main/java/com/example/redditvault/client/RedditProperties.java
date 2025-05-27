@@ -34,7 +34,7 @@ public class RedditProperties {
     public static final String REFRESH_TOKEN_NAME = "refresh_token";
 
     //public static final String SCOPES = "identity, edit, flair, history, modconfig, modflair, modlog, modposts, modwiki, mysubreddits, privatemessages, read, report, save, submit, subscribe, vote, wikiedit, wikiread";
-    public static final String SCOPES = "identity";
+    public static final String SCOPES = "identity,history";
     public static boolean permanentAccess = true;
 
     private String bearerToken;

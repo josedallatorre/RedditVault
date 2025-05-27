@@ -1,7 +1,5 @@
 package com.example.redditvault.client;
 
-import org.springframework.http.ResponseEntity;
-
 public class RedditClient {
     private String id;
     private String username;
