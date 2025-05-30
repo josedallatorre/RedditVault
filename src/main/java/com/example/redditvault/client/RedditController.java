@@ -3,12 +3,14 @@ package com.example.redditvault.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -30,7 +32,13 @@ public class RedditController {
          return redditClientService.exchangeCodeForToken(code, state);
      }
 
-    @CrossOrigin(origins = "http://localhost:3000")
+    @GetMapping("/info")
+    public Map<String, Object> userInfo(OAuth2AuthenticationToken authentication) {
+        // Return the user's attributes as a map
+        return authentication.getPrincipal().getAttributes();
+    }
+
+    @CrossOrigin(origins = "http://localhost:5173")
     @GetMapping("/me")
     public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String bearerToken) {
         try {
@@ -43,7 +51,7 @@ public class RedditController {
         }
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:5173")
     @PostMapping("/saved")
     public RedditResponse getUserSaved(@RequestHeader("Authorization") String bearerToken, @RequestBody User username)throws Exception {
         String token = bearerToken.replace("Bearer ", "").trim();
