@@ -21,10 +21,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.*;
 
 @Service
 public class RedditClientService {
@@ -32,12 +30,13 @@ public class RedditClientService {
     private final HttpClient client = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper;
     private final WebClient webClient = WebClient.builder()
-
             .build();
-
-    public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper) {
+    private final RedditTokenRepository redditTokenRepository;
+    public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
+                               RedditTokenRepository redditTokenRepository) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
+        this.redditTokenRepository = redditTokenRepository;
     }
 
 
@@ -91,13 +90,55 @@ public class RedditClientService {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body(); // You can return token JSON or extract it
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Failed to get token: " + response.body());
+            }
 
+            // Parse response JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(response.body());
+
+            String accessToken = jsonNode.get("access_token").asText();
+            String refreshToken = jsonNode.has("refresh_token") ? jsonNode.get("refresh_token").asText() : null;
+            int expiresIn = jsonNode.get("expires_in").asInt();
+
+            // Optional: fetch username with access token
+            String redditUsername = fetchUsername(accessToken);
+
+            // Store to DB
+            RedditToken token = new RedditToken();
+            token.setAccessToken(accessToken);
+            token.setRefreshToken(refreshToken);
+            token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
+            token.setRedditUsername(redditUsername);
+
+            redditTokenRepository.save(token);
+
+            return "Token saved for user: " + redditUsername;
         } catch (Exception e) {
             e.printStackTrace();
             return "Failed to exchange code for token: " + e.getMessage();
         }
     }
+    private String fetchUsername(String accessToken) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://oauth.reddit.com/api/v1/me"))
+                .header("Authorization", "bearer " + accessToken)
+                .header("User-Agent", "myapp/0.0.1")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode jsonNode = new ObjectMapper().readTree(response.body());
+        return jsonNode.get("name").asText(); // "name" is the Reddit username
+    }
+
+    public String getAccessToken(String redditUsername) {
+        return redditTokenRepository.findByRedditUsername(redditUsername)
+                .map(RedditToken::getAccessToken)
+                .orElseThrow(() -> new RuntimeException("User not authorized"));
+    }
+
     public String getUserInfo(String accessToken) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
