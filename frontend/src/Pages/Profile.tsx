@@ -10,17 +10,20 @@ type RedditUser = {
 };
 
 function Profile() {
-  const token = "";
+  const token = localStorage.getItem("redditUsername");
   const [user, setUser] = useState<RedditUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("http://localhost:8080/me", {
-      method: "GET",
+      method: "POST",
       headers: {
         "Content-type": "application/json",
-        Authorization: token,
+        Authorization: token || "",
       },
+      body: JSON.stringify({
+        username: token, // or separate username if needed
+      }),
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -45,6 +48,14 @@ function Profile() {
         {!user && !error && (
           <div className="text-lg text-gray-700 mb-4">Loading...</div>
         )}
+        <div>
+
+        {
+        token ? (
+                    <p>Welcome, {token}!</p>
+                ) : (
+                    <p>No username</p>)}
+        </div>
 
         {user && (
           <div className="user-card">
