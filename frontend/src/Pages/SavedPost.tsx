@@ -37,16 +37,16 @@ function SavedPost() {
 
   useEffect(() => {
     async function fetchVideos() {
+      const redditUsername = localStorage.getItem("redditUsername");
       try {
-        const token = "";
         const res = await fetch("http://localhost:8080/saved", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: token,
+            Authorization: redditUsername || "",
           },
-          body: JSON.stringify({
-            username: "33prova33",
+            body: JSON.stringify({
+            username: redditUsername, // or separate username if needed
           }),
         });
 
