@@ -114,7 +114,7 @@ public class RedditClientService {
 
             redditTokenRepository.save(token);
 
-            return "Token saved for user: " + redditUsername;
+            return redditUsername;
         } catch (Exception e) {
             e.printStackTrace();
             return "Failed to exchange code for token: " + e.getMessage();
@@ -139,7 +139,9 @@ public class RedditClientService {
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
     }
 
-    public String getUserInfo(String accessToken) {
+    public String getUserInfo(String username) {
+        String accessToken = getAccessToken(username);
+        System.out.println("Access token for " + username + ": " + accessToken);
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(RedditProperties.ME_URL))
@@ -157,7 +159,9 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public RedditResponse getUserSaved(String accessToken, String username)throws Exception {
+    public RedditResponse getUserSaved(String username)throws Exception {
+        String accessToken = getAccessToken(username);
+        System.out.println("Access token for " + username + ": " + accessToken);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(String.format("https://oauth.reddit.com/user/%s/saved", username)))
                     .header("Authorization", "Bearer " + accessToken)
