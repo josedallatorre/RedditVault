@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 function Home() {
     const [username, setUsername] = useState<string | null>(null);
     useEffect(() => {
+        if (!sessionStorage.getItem("visited")) {
+            localStorage.clear(); // first visit in this tab/window
+            sessionStorage.setItem("visited", "true");
+        }
         const params = new URLSearchParams(window.location.search);
         const usernameFromQuery = params.get("username");
         const error = params.get("error");
