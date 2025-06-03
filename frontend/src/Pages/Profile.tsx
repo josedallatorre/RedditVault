@@ -10,7 +10,7 @@ type RedditUser = {
 };
 
 function Profile() {
-  const token = localStorage.getItem("redditUsername");
+  const redditUsername = localStorage.getItem("redditUsername");
   const [user, setUser] = useState<RedditUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,10 +19,10 @@ function Profile() {
       method: "POST",
       headers: {
         "Content-type": "application/json",
-        Authorization: token || "",
+        Authorization: redditUsername || "",
       },
       body: JSON.stringify({
-        username: token, // or separate username if needed
+        username: redditUsername, // or separate username if needed
       }),
     })
       .then(async (response) => {
@@ -51,8 +51,8 @@ function Profile() {
         <div>
 
         {
-        token ? (
-                    <p>Welcome, {token}!</p>
+        redditUsername ? (
+                    <p>Welcome, {redditUsername}!</p>
                 ) : (
                     <p>No username</p>)}
         </div>
