@@ -7,5 +7,5 @@ import java.util.Optional;
 
 @Repository
 public interface SubredditRepository extends JpaRepository<Subreddit, String> {
-    Optional<Subreddit> findsubredditByName(String subredditName);
+    //Optional<Subreddit> findsubredditByName(String subredditName);
 }

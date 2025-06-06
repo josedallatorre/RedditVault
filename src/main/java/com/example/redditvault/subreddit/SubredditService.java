@@ -1,6 +1,5 @@
 package com.example.redditvault.subreddit;
 
-import com.example.redditvault.subreddit.SubredditRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,19 +20,15 @@ public class SubredditService {
     }
 
     public void addNewSubreddit(Subreddit subreddit) {
+        /*
         Optional<Subreddit> subredditOptional =  subredditRepository.findsubredditByName(subreddit.getName());
+
         if (subredditOptional.isPresent()) {
             throw new IllegalStateException("Subreddit name already exists");
         }
+        */
         subredditRepository.save(subreddit);
         System.out.println(subreddit);
     }
 
-    public void deleteSubreddit(String subredditName) {
-        boolean exists = subredditRepository.existsById(subredditName);
-        if (!exists) {
-            throw new IllegalStateException("Subreddit with name "+ subredditName + " does not exist");
-        }
-        subredditRepository.deleteById(subredditName);
-    }
 }
