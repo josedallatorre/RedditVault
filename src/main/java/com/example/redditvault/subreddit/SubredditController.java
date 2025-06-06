@@ -24,10 +24,11 @@ public class SubredditController {
     public void registerSubreddit(@RequestBody Subreddit subreddit) {
         subredditService.addNewSubreddit(subreddit);
     }
-
+    /*
     @DeleteMapping(path = "{subredditName}")
     public void deleteSubreddit(@PathVariable("subredditName") String subredditName) {
         subredditService.deleteSubreddit(subredditName);
     }
+    */
 
 }
