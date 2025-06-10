@@ -172,7 +172,11 @@ public class RedditClientService {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             System.out.println(response.body());
-            return objectMapper.readValue(response.body(), RedditResponse.class);
+            RedditResponse redditResponse =objectMapper.readValue(response.body(), RedditResponse.class);
+            //RedditChildren redditChildren = redditResponse.getData().getChildren();
+            System.out.println(redditResponse.toString());
+
+            return redditResponse;
 
     }
 
