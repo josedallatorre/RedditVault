@@ -174,7 +174,7 @@ public class RedditClientService {
             System.out.println(response.body());
             RedditResponse redditResponse =objectMapper.readValue(response.body(), RedditResponse.class);
             //RedditChildren redditChildren = redditResponse.getData().getChildren();
-            System.out.println(redditResponse.toString());
+            System.out.println(redditResponse);
 
             return redditResponse;
 
