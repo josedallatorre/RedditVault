@@ -1,7 +1,10 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.subreddit.Subreddit;
+import com.example.redditvault.subreddit.SubredditRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,11 +35,14 @@ public class RedditClientService {
     private final WebClient webClient = WebClient.builder()
             .build();
     private final RedditTokenRepository redditTokenRepository;
+    private final SubredditRepository subredditRepository;
+    @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
-                               RedditTokenRepository redditTokenRepository) {
+                               RedditTokenRepository redditTokenRepository, SubredditRepository subredditRepository) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
         this.redditTokenRepository = redditTokenRepository;
+        this.subredditRepository = subredditRepository;
     }
 
 
@@ -172,9 +178,18 @@ public class RedditClientService {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             System.out.println(response.body());
-            RedditResponse redditResponse =objectMapper.readValue(response.body(), RedditResponse.class);
-            //RedditChildren redditChildren = redditResponse.getData().getChildren();
-            System.out.println(redditResponse);
+            RedditResponse redditResponse;
+            redditResponse = objectMapper.readValue(response.body(), RedditResponse.class);
+            List<RedditChildren> redditChildrenn = redditResponse.getData().getChildren();
+            for (RedditChildren redditChildren : redditChildrenn) {
+                //Optional<Subreddit> subredditOptional = subredditRepository.
+                //if (postOptional.isPresent()) {
+                    //throw new IllegalStateException("Post author already exists");
+                //}
+                subredditRepository.save(redditChildren.getRedditSavedItem().getSubreddit());
+                System.out.println(redditChildren.getRedditSavedItem().getSubreddit().toString());
+            }
+            System.out.println(redditResponse.toString());
 
             return redditResponse;
 
