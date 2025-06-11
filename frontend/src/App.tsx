@@ -1,21 +1,27 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import './App.css';
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
+import { Routes, Route } from 'react-router-dom';
 import Profile from './Pages/Profile';
 import Home from './Pages/Home';
 import SavedPost from './Pages/SavedPost';
 import Layout from './components/Layout';
+import Vite from './Pages/ViteIndex';
+
 
 function App() {
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={< Layout />} />
+    <Routes>
+      <Route path="/" element={< Layout />}>
         <Route index element={<Home />} />
         <Route path="/profile" element={< Profile />} />
         <Route path="/saved" element={< SavedPost />} />
-      </Routes>
-    </BrowserRouter>
-  );
+        <Route path="/vite" element={ <Vite /> } />
+      </Route>
+    </Routes>
+  )
 }
 
-export default App;
+export default App

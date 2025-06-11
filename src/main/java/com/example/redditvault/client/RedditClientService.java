@@ -1,7 +1,10 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.subreddit.Subreddit;
+import com.example.redditvault.subreddit.SubredditRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +24,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.*;
 
 @Service
 public class RedditClientService {
@@ -32,12 +33,16 @@ public class RedditClientService {
     private final HttpClient client = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper;
     private final WebClient webClient = WebClient.builder()
-
             .build();
-
-    public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper) {
+    private final RedditTokenRepository redditTokenRepository;
+    private final SubredditRepository subredditRepository;
+    @Autowired
+    public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
+                               RedditTokenRepository redditTokenRepository, SubredditRepository subredditRepository) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
+        this.redditTokenRepository = redditTokenRepository;
+        this.subredditRepository = subredditRepository;
     }
 
 
@@ -91,14 +96,58 @@ public class RedditClientService {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body(); // You can return token JSON or extract it
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Failed to get token: " + response.body());
+            }
 
+            // Parse response JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(response.body());
+
+            String accessToken = jsonNode.get("access_token").asText();
+            String refreshToken = jsonNode.has("refresh_token") ? jsonNode.get("refresh_token").asText() : null;
+            int expiresIn = jsonNode.get("expires_in").asInt();
+
+            // Optional: fetch username with access token
+            String redditUsername = fetchUsername(accessToken);
+
+            // Store to DB
+            RedditToken token = new RedditToken();
+            token.setAccessToken(accessToken);
+            token.setRefreshToken(refreshToken);
+            token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
+            token.setRedditUsername(redditUsername);
+
+            redditTokenRepository.save(token);
+
+            return redditUsername;
         } catch (Exception e) {
             e.printStackTrace();
             return "Failed to exchange code for token: " + e.getMessage();
         }
     }
-    public String getUserInfo(String accessToken) {
+    private String fetchUsername(String accessToken) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://oauth.reddit.com/api/v1/me"))
+                .header("Authorization", "bearer " + accessToken)
+                .header("User-Agent", "myapp/0.0.1")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode jsonNode = new ObjectMapper().readTree(response.body());
+        return jsonNode.get("name").asText(); // "name" is the Reddit username
+    }
+
+    public String getAccessToken(String redditUsername) {
+        return redditTokenRepository.findByRedditUsername(redditUsername)
+                .map(RedditToken::getAccessToken)
+                .orElseThrow(() -> new RuntimeException("User not authorized"));
+    }
+
+    public String getUserInfo(String username) {
+        String accessToken = getAccessToken(username);
+        System.out.println("Access token for " + username + ": " + accessToken);
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(RedditProperties.ME_URL))
@@ -116,7 +165,9 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public RedditResponse getUserSaved(String accessToken, String username)throws Exception {
+    public RedditResponse getUserSaved(String username)throws Exception {
+        String accessToken = getAccessToken(username);
+        System.out.println("Access token for " + username + ": " + accessToken);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(String.format("https://oauth.reddit.com/user/%s/saved", username)))
                     .header("Authorization", "Bearer " + accessToken)
@@ -127,7 +178,20 @@ public class RedditClientService {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             System.out.println(response.body());
-            return objectMapper.readValue(response.body(), RedditResponse.class);
+            RedditResponse redditResponse;
+            redditResponse = objectMapper.readValue(response.body(), RedditResponse.class);
+            List<RedditChildren> redditChildrenn = redditResponse.getData().getChildren();
+            for (RedditChildren redditChildren : redditChildrenn) {
+                //Optional<Subreddit> subredditOptional = subredditRepository.
+                //if (postOptional.isPresent()) {
+                    //throw new IllegalStateException("Post author already exists");
+                //}
+                subredditRepository.save(redditChildren.getRedditSavedItem().getSubreddit());
+                System.out.println(redditChildren.getRedditSavedItem().getSubreddit().toString());
+            }
+            System.out.println(redditResponse.toString());
+
+            return redditResponse;
 
     }
 
