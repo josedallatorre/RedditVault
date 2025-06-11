@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
-import styles from '../assets/css/SavedPost.module.css'
 
 type RedditVideo = {
   fallback_url: string | null;
 };
+type Subreddit = {
+  name: string;
+}
 
 type PostData = {
   title: string;
   selftext: string;
-  subreddit: string;
+  subreddit: Subreddit;
   author_fullname: string | null;
   saved: boolean;
   secure_media: {
@@ -38,16 +40,16 @@ function SavedPost() {
 
   useEffect(() => {
     async function fetchVideos() {
+      const redditUsername = localStorage.getItem("redditUsername");
       try {
-        const token = "";
         const res = await fetch("http://localhost:8080/saved", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: token,
+            Authorization: redditUsername || "",
           },
           body: JSON.stringify({
-            username: "33prova33",
+            username: redditUsername, // or separate username if needed
           }),
         });
 
@@ -59,6 +61,7 @@ function SavedPost() {
 
         if (json.data && Array.isArray(json.data.children)) {
           const posts = json.data.children.map((child) => child.data);
+          console.log(posts);
           setVideos(posts);
         } else {
           throw new Error("Unexpected API response format");
@@ -74,34 +77,47 @@ function SavedPost() {
   }, []);
 
   if (loading)
-    return <p className={styles.loading}>Loading...</p>;
+    return (
+      <p className="text-center mt-10 text-lg text-gray-700 font-medium">
+        Loading...
+      </p>
+    );
 
   if (error)
-    return <p className={`${styles.loading} ${styles.error}`}>Error: {error}</p>;
+    return (
+      <p className="text-center mt-10 text-lg text-red-600 font-semibold">
+        Error: {error}
+      </p>
+    );
 
   return (
-    <div className={styles.container}>
+    <div className="max-w-3xl mx-auto my-5 p-5 bg-gray-50 rounded-xl shadow-md font-sans">
       {videos.length === 0 && (
-        <p className={styles.noVideos}>No videos saved.</p>
+        <p className="text-center text-gray-600 italic mt-8">No videos saved.</p>
       )}
       {videos.map((video, idx) => (
-        <div key={idx} className={styles.card}>
-          <h3 className={styles.title}>{video.title}</h3>
-          <p className={styles.info}>Subreddit: {video.subreddit || "N/A"}</p>
-          <p className={styles.info}>
+        <div
+          key={idx}
+          className="bg-white rounded-lg shadow-sm p-4 mb-5 cursor-pointer transition-transform hover:scale-[1.02]"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 break-words">
+            {video.title}
+          </h3>
+          <p className="text-sm text-gray-600 mb-1 break-words">
+            Subreddit: {video.subreddit.name || "N/A"}
+          </p>
+          <p className="text-sm text-gray-600 mb-3 break-words">
             Author: {video.author_fullname || "Unknown"}
           </p>
           {video.secure_media?.reddit_video?.fallback_url ? (
             <video
-              className={styles.video}
+              className="rounded-lg max-w-full shadow-md"
               controls
               width={480}
               src={video.secure_media.reddit_video.fallback_url}
             />
           ) : (
-            <p className={styles.info} style={{ fontStyle: "italic", color: "#888" }}>
-              No video available
-            </p>
+            <p className="text-sm text-gray-500 italic">No video available</p>
           )}
         </div>
       ))}

@@ -2,13 +2,19 @@ package com.example.redditvault.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -26,16 +32,35 @@ public class RedditController {
      }
 
      @GetMapping(path = "oauth/callback")
-    public String oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
-         return redditClientService.exchangeCodeForToken(code, state);
+    public ResponseEntity<Void>  oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
+         String redditUsername;
+
+         try {
+             redditUsername =redditClientService.exchangeCodeForToken(code, state); // returns username
+         } catch (Exception e) {
+             // In case of error, redirect with an error message
+             URI errorRedirect = URI.create("http://localhost:5173/?error=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
+             return ResponseEntity.status(HttpStatus.FOUND).location(errorRedirect).build();
+         }
+
+         // Redirect with the username
+         URI redirectUri = URI.create("http://localhost:5173/?username=" + URLEncoder.encode(redditUsername, StandardCharsets.UTF_8));
+         return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
+
      }
 
-    @CrossOrigin(origins = "http://localhost:3000")
-    @GetMapping("/me")
-    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String bearerToken) {
+    @GetMapping("/info")
+    public Map<String, Object> userInfo(OAuth2AuthenticationToken authentication) {
+        // Return the user's attributes as a map
+        return authentication.getPrincipal().getAttributes();
+    }
+
+    @CrossOrigin(origins = "http://localhost:5173")
+    @PostMapping("/me")
+    public ResponseEntity<String> getUserInfo(@RequestBody User user) {
+        String username = user.getUsername();
         try {
-            String token = bearerToken.replace("Bearer ", "").trim();
-            String userJson = redditClientService.getUserInfo(token);
+            String userJson = redditClientService.getUserInfo(username);
             return ResponseEntity.ok(userJson);
         } catch (Exception e) {
             e.printStackTrace();
@@ -43,12 +68,11 @@ public class RedditController {
         }
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:5173")
     @PostMapping("/saved")
-    public RedditResponse getUserSaved(@RequestHeader("Authorization") String bearerToken, @RequestBody User username)throws Exception {
-        String token = bearerToken.replace("Bearer ", "").trim();
-        String name = username.getUsername();
-        return redditClientService.getUserSaved(token, name);
+    public RedditResponse getUserSaved(@RequestBody User user)throws Exception {
+        String username = user.getUsername();
+        return redditClientService.getUserSaved(username);
         //return ResponseEntity.ok(userJson);
     }
     @PostMapping("download")
