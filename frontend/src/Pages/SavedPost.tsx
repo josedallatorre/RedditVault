@@ -3,11 +3,14 @@ import React, { useEffect, useState } from "react";
 type RedditVideo = {
   fallback_url: string | null;
 };
+type Subreddit = {
+  name: string;
+}
 
 type PostData = {
   title: string;
   selftext: string;
-  subreddit: string;
+  subreddit: Subreddit;
   author_fullname: string | null;
   saved: boolean;
   secure_media: {
@@ -45,7 +48,7 @@ function SavedPost() {
             "Content-Type": "application/json",
             Authorization: redditUsername || "",
           },
-            body: JSON.stringify({
+          body: JSON.stringify({
             username: redditUsername, // or separate username if needed
           }),
         });
@@ -58,6 +61,7 @@ function SavedPost() {
 
         if (json.data && Array.isArray(json.data.children)) {
           const posts = json.data.children.map((child) => child.data);
+          console.log(posts);
           setVideos(posts);
         } else {
           throw new Error("Unexpected API response format");
@@ -100,7 +104,7 @@ function SavedPost() {
             {video.title}
           </h3>
           <p className="text-sm text-gray-600 mb-1 break-words">
-            Subreddit: {video.subreddit || "N/A"}
+            Subreddit: {video.subreddit.name || "N/A"}
           </p>
           <p className="text-sm text-gray-600 mb-3 break-words">
             Author: {video.author_fullname || "Unknown"}
