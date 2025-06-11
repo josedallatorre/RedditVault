@@ -15,7 +15,7 @@ public class SubredditController {
     public SubredditController(SubredditService subredditService) {
         this.subredditService = subredditService;
     }
-    @GetMapping
+    @PostMapping("subreddits")
     public List<Subreddit> getSubreddits() {
         return subredditService.getAllSubreddits();
     }
