@@ -1,14 +1,15 @@
 package com.example.redditvault.client;
+import com.example.redditvault.subreddit.Subreddit;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RedditSavedItem {
     private String title;
     private String selftext;
-    private String subreddit;
+    @JsonProperty("subreddit")
+    private Subreddit subreddit;
     private String author_fullname;
     private boolean saved;
     @JsonProperty("secure_media")
@@ -40,11 +41,11 @@ public class RedditSavedItem {
         this.selftext = selftext;
     }
 
-    public String getSubreddit() {
+    public Subreddit getSubreddit() {
         return subreddit;
     }
 
-    public void setSubreddit(String subreddit) {
+    public void setSubreddit(Subreddit subreddit) {
         this.subreddit = subreddit;
     }
 
