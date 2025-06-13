@@ -9,6 +9,7 @@ const Layout = () => {
           <Link to="/">Home</Link>
           <Link to="/profile">Profile</Link>
           <Link to="/saved">Saved Posts</Link>
+          <Link to="/subreddit">Saved Subreddit</Link>
           <Link to="/vite">Vite index page</Link>
         </nav>
       </header>
