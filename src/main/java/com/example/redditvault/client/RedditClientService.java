@@ -1,5 +1,7 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.redditPost.RedditPost;
+import com.example.redditvault.redditPost.RedditPostRepository;
 import com.example.redditvault.subreddit.Subreddit;
 import com.example.redditvault.subreddit.SubredditRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,13 +38,16 @@ public class RedditClientService {
             .build();
     private final RedditTokenRepository redditTokenRepository;
     private final SubredditRepository subredditRepository;
+    private final RedditPostRepository redditPostRepository;
     @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
-                               RedditTokenRepository redditTokenRepository, SubredditRepository subredditRepository) {
+                               RedditTokenRepository redditTokenRepository, SubredditRepository subredditRepository,
+                               RedditPostRepository redditPostRepository) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
         this.redditTokenRepository = redditTokenRepository;
         this.subredditRepository = subredditRepository;
+        this.redditPostRepository = redditPostRepository;
     }
 
 
@@ -187,6 +192,11 @@ public class RedditClientService {
                     //throw new IllegalStateException("Post author already exists");
                 //}
                 subredditRepository.save(redditChildren.getRedditSavedItem().getSubreddit());
+                RedditPost post = new RedditPost(
+                        redditChildren.getRedditSavedItem().getId(),
+                        redditChildren.getRedditSavedItem().getAuthor(),
+                        redditChildren.getRedditSavedItem().getTitle());
+                redditPostRepository.save(post);
                 System.out.println(redditChildren.getRedditSavedItem().getSubreddit().toString());
             }
             System.out.println(redditResponse.toString());

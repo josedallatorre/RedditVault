@@ -1,32 +1,19 @@
-package com.example.redditvault.post;
+package com.example.redditvault.redditPost;
 import jakarta.persistence.*;
 
 
 @Entity
 @Table
-public class Post {
+public class RedditPost {
     @Id
-    @SequenceGenerator(
-            name = "post_sequence",
-            sequenceName = "post_sequence",
-            allocationSize = 1
-    )
-    @GeneratedValue(
-            strategy = GenerationType.SEQUENCE,
-            generator = "post_sequence"
-    )
-    private Long id;
+    private String id;
     private String author;
     private String title;
 
-    public Post() {}
+    public RedditPost() {}
 
-    public Post(String author, Long id, String title) {
-        this.author = author;
+    public RedditPost(String id,String author,  String title) {
         this.id = id;
-        this.title = title;
-    }
-    public Post(String author, String title) {
         this.author = author;
         this.title = title;
     }
@@ -39,11 +26,11 @@ public class Post {
         this.author = author;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

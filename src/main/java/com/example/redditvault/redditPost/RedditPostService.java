@@ -1,4 +1,4 @@
-package com.example.redditvault.post;
+package com.example.redditvault.redditPost;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -8,21 +8,21 @@ import java.util.Optional;
 
 // Now this is bean
 @Service
-public class PostService {
+public class RedditPostService {
 
-    private final PostRepository  postRepository;
+    private final RedditPostRepository postRepository;
 
     @Autowired
-    public PostService(PostRepository postRepository) {
+    public RedditPostService(RedditPostRepository postRepository) {
         this.postRepository = postRepository;
     }
 
-    public List<Post> getPosts() {
+    public List<RedditPost> getPosts() {
         return postRepository.findAll();
     }
 
-    public void addNewPost(Post post) {
-        Optional<Post> postOptional =  postRepository.findPostByAuthor(post.getAuthor());
+    public void addNewPost(RedditPost post) {
+        Optional<RedditPost> postOptional =  postRepository.findPostByAuthor(post.getAuthor());
         if (postOptional.isPresent()) {
             throw new IllegalStateException("Post author already exists");
         }
