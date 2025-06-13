@@ -10,7 +10,7 @@ public class RedditSavedItem {
     private String selftext;
     @JsonProperty("subreddit")
     private Subreddit subreddit;
-    private String author_fullname;
+    private String author;
     private boolean saved;
     @JsonProperty("secure_media")
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -49,12 +49,12 @@ public class RedditSavedItem {
         this.subreddit = subreddit;
     }
 
-    public String getAuthor_fullname() {
-        return author_fullname;
+    public String getAuthor() {
+        return author;
     }
 
-    public void setAuthor_fullname(String author_fullname) {
-        this.author_fullname = author_fullname;
+    public void setAuthor(String author) {
+        this.author = author;
     }
 
     public boolean isSaved() {
