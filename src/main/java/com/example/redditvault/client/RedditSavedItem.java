@@ -8,9 +8,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class RedditSavedItem {
     private String title;
     private String selftext;
+    private String id;
     @JsonProperty("subreddit")
     private Subreddit subreddit;
-    private String author_fullname;
+    private String author;
     private boolean saved;
     @JsonProperty("secure_media")
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -22,6 +23,14 @@ public class RedditSavedItem {
 
     public void setSecure_media(RedditMedia secure_media) {
         this.secure_media = secure_media;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     // Getters and setters
@@ -49,12 +58,12 @@ public class RedditSavedItem {
         this.subreddit = subreddit;
     }
 
-    public String getAuthor_fullname() {
-        return author_fullname;
+    public String getAuthor() {
+        return author;
     }
 
-    public void setAuthor_fullname(String author_fullname) {
-        this.author_fullname = author_fullname;
+    public void setAuthor(String author) {
+        this.author = author;
     }
 
     public boolean isSaved() {

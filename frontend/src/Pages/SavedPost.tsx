@@ -11,7 +11,7 @@ type PostData = {
   title: string;
   selftext: string;
   subreddit: Subreddit;
-  author_fullname: string | null;
+  author: string | null;
   saved: boolean;
   secure_media: {
     reddit_video: RedditVideo | null;
@@ -107,7 +107,7 @@ function SavedPost() {
             Subreddit: {video.subreddit.name || "N/A"}
           </p>
           <p className="text-sm text-gray-600 mb-3 break-words">
-            Author: {video.author_fullname || "Unknown"}
+            Author: {video.author || "Unknown"}
           </p>
           {video.secure_media?.reddit_video?.fallback_url ? (
             <video
