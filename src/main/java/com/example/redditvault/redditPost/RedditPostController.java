@@ -1,4 +1,4 @@
-package com.example.redditvault.post;
+package com.example.redditvault.redditPost;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -7,21 +7,21 @@ import java.util.List;
 
 @RestController
 @RequestMapping(path = "api/v1/post")
-public class PostController {
-    private final PostService postService;
+public class RedditPostController {
+    private final RedditPostService postService;
 
     // Dependency Injection
     @Autowired
-    public PostController(PostService postService) {
+    public RedditPostController(RedditPostService postService) {
         this.postService = postService;
     }
     @GetMapping
-    public List<Post> getPosts() {
+    public List<RedditPost> getPosts() {
         return postService.getPosts();
     }
 
     @PostMapping
-    public void registerPost(@RequestBody Post post) {
+    public void registerPost(@RequestBody RedditPost post) {
         postService.addNewPost(post);
     }
 
