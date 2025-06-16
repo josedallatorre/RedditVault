@@ -75,6 +75,7 @@ public class RedditClientService {
         return "";
     }
     public ResponseEntity<String> getAuthUrl(){
+        //TODO: generate a random state and then check if a request of auth is valid
         String state = "prova";
         String url = String.format(
                 redditProperties.getUserAuthUrl(state)
