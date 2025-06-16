@@ -93,6 +93,8 @@ public class RedditClientService {
             // Optional: fetch username with access token
             String redditUsername = fetchUsername(accessToken);
 
+            //TODO: modify logic, token should be unique for user, rn is causing error in DB
+            //TODO: create a logic to refresh token if the user is still sending requests
             // Store to DB
             RedditToken token = new RedditToken();
             token.setAccessToken(accessToken);
