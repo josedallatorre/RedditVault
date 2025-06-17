@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
+@RequestMapping(path = "api/v1/redditclient")
 public class RedditController {
     private final RedditClientService redditClientService;
 
@@ -31,7 +32,7 @@ public class RedditController {
          return redditClientService.getAuthUrl();
      }
 
-     @GetMapping(path = "oauth/callback")
+     @GetMapping(path = "/oauth/callback")
     public ResponseEntity<Void>  oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
          String redditUsername;
 
@@ -75,7 +76,7 @@ public class RedditController {
         return redditClientService.getUserSaved(username);
         //return ResponseEntity.ok(userJson);
     }
-    @PostMapping("download")
+    @PostMapping("/download")
     public void downloadRedditMedia(@RequestBody List<DownloadRequest> requests) throws IOException {
         CompletableFuture.allOf(
                 requests.stream()
