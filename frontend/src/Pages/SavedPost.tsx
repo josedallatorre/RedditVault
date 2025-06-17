@@ -42,7 +42,7 @@ function SavedPost() {
     async function fetchVideos() {
       const redditUsername = localStorage.getItem("redditUsername");
       try {
-        const res = await fetch("http://localhost:8080/saved", {
+        const res = await fetch("http://localhost:8080/api/v1/redditclient/saved", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
