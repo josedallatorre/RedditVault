@@ -39,7 +39,10 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults()) // Enable CORS
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/","/auth", "/oauth/callback", "info", "/me", "/saved", "/api/v1/subreddit","/api/v1/subreddit/subreddits").permitAll()
+                        .requestMatchers("/","/api/v1/redditclient/auth",
+                                "api/v1/redditclient/oauth/callback", "info",
+                                "/api/v1/redditclient/me", "api/v1/redditclient/saved",
+                                "/api/v1/subreddit","/api/v1/subreddit/subreddits").permitAll()
                         //.anyRequest().authenticated()
                 );
 
