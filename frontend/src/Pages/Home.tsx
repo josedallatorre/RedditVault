@@ -10,11 +10,15 @@ function Home() {
         }
         const params = new URLSearchParams(window.location.search);
         const usernameFromQuery = params.get("username");
+        const redditUsername = localStorage.getItem("redditUsername");
         const error = params.get("error");
 
-        if (usernameFromQuery) {
-            setUsername(usernameFromQuery);
+        if(redditUsername){
+            setUsername(redditUsername);
+        }
+        else if (usernameFromQuery) {
             localStorage.setItem("redditUsername", usernameFromQuery);
+            setUsername(usernameFromQuery);
         }
 
         if (error) {
