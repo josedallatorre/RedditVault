@@ -15,7 +15,7 @@ function Profile() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8080/me", {
+    fetch("http://localhost:8080/api/v1/redditclient/me", {
       method: "POST",
       headers: {
         "Content-type": "application/json",

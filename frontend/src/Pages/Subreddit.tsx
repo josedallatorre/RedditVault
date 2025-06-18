@@ -74,39 +74,6 @@ function Subreddit() {
             }
 
         </div>
-        /*
-        <div className="max-w-3xl mx-auto my-5 p-5 bg-gray-50 rounded-xl shadow-md font-sans">
-          {videos.length === 0 && (
-            <p className="text-center text-gray-600 italic mt-8">No videos saved.</p>
-          )}
-          {videos.map((video, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-lg shadow-sm p-4 mb-5 cursor-pointer transition-transform hover:scale-[1.02]"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 break-words">
-                {video.title}
-              </h3>
-              <p className="text-sm text-gray-600 mb-1 break-words">
-                Subreddit: {video.subreddit.name || "N/A"}
-              </p>
-              <p className="text-sm text-gray-600 mb-3 break-words">
-                Author: {video.author_fullname || "Unknown"}
-              </p>
-              {video.secure_media?.reddit_video?.fallback_url ? (
-                <video
-                  className="rounded-lg max-w-full shadow-md"
-                  controls
-                  width={480}
-                  src={video.secure_media.reddit_video.fallback_url}
-                />
-              ) : (
-                <p className="text-sm text-gray-500 italic">No video available</p>
-              )}
-            </div>
-          ))}
-        </div>
-            */
     );
 }
 

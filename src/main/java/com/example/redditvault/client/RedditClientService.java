@@ -50,31 +50,8 @@ public class RedditClientService {
         this.redditPostRepository = redditPostRepository;
     }
 
-
-    public String getMe(){
-//        RestTemplate restTemplate = new RestTemplate();
-//
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.setBearerAuth(token); // Automatically formats "Bearer <token>"
-//        headers.setContentType(MediaType.APPLICATION_JSON);
-//
-//        HttpEntity<String> entity = new HttpEntity<>(headers);
-//
-//        String url = "https://oauth.reddit.com/api/v1/me";
-//
-//        ResponseEntity<String> response = restTemplate.exchange(
-//                url,
-//                HttpMethod.GET,
-//                entity,
-//                String.class
-//        );
-//
-//        return  response.getBody();
-        //RedditProperties r = new RedditProperties("1","ciao",true);
-        //return r.getCode("ciao");
-        return "";
-    }
     public ResponseEntity<String> getAuthUrl(){
+        //TODO: generate a random state and then check if a request of auth is valid
         String state = "prova";
         String url = String.format(
                 redditProperties.getUserAuthUrl(state)
@@ -116,6 +93,8 @@ public class RedditClientService {
             // Optional: fetch username with access token
             String redditUsername = fetchUsername(accessToken);
 
+            //TODO: modify logic, token should be unique for user, rn is causing error in DB
+            //TODO: create a logic to refresh token if the user is still sending requests
             // Store to DB
             RedditToken token = new RedditToken();
             token.setAccessToken(accessToken);
