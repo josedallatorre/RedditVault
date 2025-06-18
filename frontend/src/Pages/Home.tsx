@@ -10,11 +10,15 @@ function Home() {
         }
         const params = new URLSearchParams(window.location.search);
         const usernameFromQuery = params.get("username");
+        const redditUsername = localStorage.getItem("redditUsername");
         const error = params.get("error");
 
-        if (usernameFromQuery) {
-            setUsername(usernameFromQuery);
+        if(redditUsername){
+            setUsername(redditUsername);
+        }
+        else if (usernameFromQuery) {
             localStorage.setItem("redditUsername", usernameFromQuery);
+            setUsername(usernameFromQuery);
         }
 
         if (error) {
@@ -36,7 +40,7 @@ function Home() {
                     <p>Welcome, {username}!</p>
                 ) : (
                     <a
-                        href="http://localhost:8080/auth"
+                        href="http://localhost:8080/api/v1/redditclient/auth"
                         //target="_blank"
                         rel="noopener noreferrer"
                         className="bg-orange-600 text-white rounded-md px-7 py-3 text-lg font-semibold transition-colors duration-300 hover:bg-orange-700 inline-block"
