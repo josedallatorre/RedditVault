@@ -9,13 +9,15 @@ public class RedditPost {
     private String id;
     private String author;
     private String title;
+    private String url;
 
     public RedditPost() {}
 
-    public RedditPost(String id,String author,  String title) {
+    public RedditPost(String id,String author, String title, String url) {
         this.id = id;
         this.author = author;
         this.title = title;
+        this.url = url;
     }
 
     public String getAuthor() {
@@ -40,6 +42,14 @@ public class RedditPost {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     @Override
