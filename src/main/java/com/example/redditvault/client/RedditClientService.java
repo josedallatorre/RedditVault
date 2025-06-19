@@ -149,7 +149,7 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public RedditResponse getUserSaved(String username)throws Exception {
+    public List<RedditPost> getUserSaved(String username)throws Exception {
         String accessToken = getAccessToken(username);
         System.out.println("Access token for " + username + ": " + accessToken);
             HttpRequest request = HttpRequest.newBuilder()
@@ -165,22 +165,31 @@ public class RedditClientService {
             RedditResponse redditResponse;
             redditResponse = objectMapper.readValue(response.body(), RedditResponse.class);
             List<RedditChildren> redditChildrenn = redditResponse.getData().getChildren();
+            List<RedditPost> posts = new ArrayList<>();
             for (RedditChildren redditChildren : redditChildrenn) {
                 //Optional<Subreddit> subredditOptional = subredditRepository.
                 //if (postOptional.isPresent()) {
                     //throw new IllegalStateException("Post author already exists");
                 //}
                 subredditRepository.save(redditChildren.getRedditSavedItem().getSubreddit());
+                String url;
+                if (redditChildren.getRedditSavedItem().getSecure_media() != null &&
+                        redditChildren.getRedditSavedItem().getSecure_media().getReddit_video() != null){
+                    url = redditChildren.getRedditSavedItem().getSecure_media().getReddit_video().getFallback_url();
+                }else {
+                    url = redditChildren.getRedditSavedItem().getUrl();
+                }
                 RedditPost post = new RedditPost(
                         redditChildren.getRedditSavedItem().getId(),
                         redditChildren.getRedditSavedItem().getAuthor(),
-                        redditChildren.getRedditSavedItem().getTitle());
+                        redditChildren.getRedditSavedItem().getTitle(),
+                        url
+                );
+                posts.add(post);
                 redditPostRepository.save(post);
-                System.out.println(redditChildren.getRedditSavedItem().getSubreddit().toString());
             }
-            System.out.println(redditResponse.toString());
 
-            return redditResponse;
+            return posts;
 
     }
 
