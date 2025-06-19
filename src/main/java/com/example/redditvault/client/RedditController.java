@@ -1,5 +1,6 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.redditPost.RedditPost;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -71,7 +72,7 @@ public class RedditController {
 
     @CrossOrigin(origins = "http://localhost:5173")
     @PostMapping("/saved")
-    public RedditResponse getUserSaved(@RequestBody User user)throws Exception {
+    public List<RedditPost> getUserSaved(@RequestBody User user)throws Exception {
         String username = user.getUsername();
         return redditClientService.getUserSaved(username);
         //return ResponseEntity.ok(userJson);
