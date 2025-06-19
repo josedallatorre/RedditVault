@@ -1,45 +1,28 @@
 import React, { useEffect, useState } from "react";
 
-type RedditVideo = {
-  fallback_url: string | null;
+type ApiResponse = RedditMedia[];
+type RedditMedia = {
+  id: string;
+  author: string;
+  title: string;
+  url: string;
 };
-type Subreddit = {
-  name: string;
+
+function getMediaType(url: string): "video" | "gif" | "image" | "gallery" | "unknown" {
+  if (url.includes("v.redd.it")) return "video";
+  if (url.match(/\.(gif)$/i)) return "gif";
+  if (url.match(/\.(jpe?g|png|webp)$/i)) return "image";
+  if (url.includes("reddit.com/gallery")) return "gallery";
+  return "unknown";
 }
 
-type PostData = {
-  title: string;
-  selftext: string;
-  subreddit: Subreddit;
-  author: string | null;
-  saved: boolean;
-  secure_media: {
-    reddit_video: RedditVideo | null;
-  };
-};
-
-type ApiChild = {
-  data: PostData;
-};
-
-type ApiResponse = {
-  kind: string;
-  data: {
-    after: string | null;
-    dist: number;
-    modhash: string | null;
-    geo_filter: string;
-    children: ApiChild[];
-  };
-};
-
 function SavedPost() {
-  const [videos, setVideos] = useState<PostData[]>([]);
+  const [posts, setMedia] = useState<RedditMedia[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    async function fetchVideos() {
+    async function fetchPosts() {
       const redditUsername = localStorage.getItem("redditUsername");
       try {
         const res = await fetch("http://localhost:8080/api/v1/redditclient/saved", {
@@ -58,11 +41,12 @@ function SavedPost() {
         }
 
         const json: ApiResponse = await res.json();
+        console.log(json);
 
-        if (json.data && Array.isArray(json.data.children)) {
-          const posts = json.data.children.map((child) => child.data);
+        if (json && Array.isArray(json)) {
+          const posts = json.map((child) => child);
           console.log(posts);
-          setVideos(posts);
+          setMedia(posts);
         } else {
           throw new Error("Unexpected API response format");
         }
@@ -73,7 +57,7 @@ function SavedPost() {
       }
     }
 
-    fetchVideos();
+    fetchPosts();
   }, []);
 
   if (loading)
@@ -91,36 +75,69 @@ function SavedPost() {
     );
 
   return (
-    <div className="max-w-3xl mx-auto my-5 p-5 bg-gray-50 rounded-xl shadow-md font-sans">
-      {videos.length === 0 && (
+    <div className="my-5 p-5 bg-gray-50 rounded-xl font-sans">
+      {posts.length === 0 && (
         <p className="text-center text-gray-600 italic mt-8">No videos saved.</p>
       )}
-      {videos.map((video, idx) => (
-        <div
-          key={idx}
-          className="bg-white rounded-lg shadow-sm p-4 mb-5 cursor-pointer transition-transform hover:scale-[1.02]"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 break-words">
-            {video.title}
-          </h3>
-          <p className="text-sm text-gray-600 mb-1 break-words">
-            Subreddit: {video.subreddit.name || "N/A"}
-          </p>
-          <p className="text-sm text-gray-600 mb-3 break-words">
-            Author: {video.author || "Unknown"}
-          </p>
-          {video.secure_media?.reddit_video?.fallback_url ? (
-            <video
-              className="rounded-lg max-w-full shadow-md"
-              controls
-              width={480}
-              src={video.secure_media.reddit_video.fallback_url}
-            />
-          ) : (
-            <p className="text-sm text-gray-500 italic">No video available</p>
-          )}
-        </div>
-      ))}
+      {posts.map((post, idx) => {
+        const mediaType = getMediaType(post.url);
+        return (
+          <div
+            key={idx}
+            className="bg-white rounded-lg shadow-sm p-4 mb-5 cursor-pointer transition-transform hover:scale-[1.02]"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 break-words">
+              {post.title}
+            </h3>
+            <p className="text-sm text-gray-600 mb-1 break-words">
+              Subreddit: {post.author || "N/A"}
+            </p>
+            <p className="text-sm text-gray-600 mb-3 break-words">
+              Author: {post.author || "Unknown"}
+            </p>
+            <p className="text-sm text-gray-600 mb-3 break-words">
+              URL: {post.url || "Unknown"}
+            </p>
+
+            {(() => {
+              switch (mediaType) {
+                case "video":
+                  return (
+                    <video
+                      className="rounded-lg max-w-full shadow-md"
+                      controls
+                      width={480}
+                      src={post.url}
+                    />
+                  );
+                case "gif":
+                case "image":
+                  return (
+                    <div className="max-w-full lg:max-w-lg border border-red-500">
+                    <img
+                      className="rounded-lg sm:max-size-20  shadow-md"
+                      src={post.url}
+                      alt={post.title}
+                    />
+                    </div>
+                  );
+                case "gallery":
+                  return (
+                    <p className="text-sm text-blue-600 italic">
+                      Reddit gallery: not directly supported.
+                    </p>
+                  );
+                default:
+                  return (
+                    <p className="text-sm text-gray-500 italic">
+                      No media available
+                    </p>
+                  );
+              }
+            })()}
+          </div>
+        );
+      })}
     </div>
   );
 }
