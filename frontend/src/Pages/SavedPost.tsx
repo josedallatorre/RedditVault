@@ -6,6 +6,7 @@ type RedditMedia = {
   author: string;
   title: string;
   url: string;
+  subreddit: string;
 };
 
 function getMediaType(url: string): "video" | "gif" | "image" | "gallery" | "unknown" {
@@ -90,7 +91,7 @@ function SavedPost() {
               {post.title}
             </h3>
             <p className="text-sm text-gray-600 mb-1 break-words">
-              Subreddit: {post.author || "N/A"}
+              Subreddit: {post.subreddit || "N/A"}
             </p>
             <p className="text-sm text-gray-600 mb-3 break-words">
               Author: {post.author || "Unknown"}
