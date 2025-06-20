@@ -9,13 +9,19 @@ public class RedditPost {
     private String id;
     private String author;
     private String title;
+    private String url;
+    private String subreddit;
 
     public RedditPost() {}
 
-    public RedditPost(String id,String author,  String title) {
+    public RedditPost(String id,String author,
+                      String title, String url,
+                      String subreddit) {
         this.id = id;
         this.author = author;
         this.title = title;
+        this.url = url;
+        this.subreddit = subreddit;
     }
 
     public String getAuthor() {
@@ -41,6 +47,19 @@ public class RedditPost {
     public void setTitle(String title) {
         this.title = title;
     }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getSubreddit() {
+        return subreddit;
+    }
+    public void setSubreddit(String subreddit) {this.subreddit = subreddit;}
 
     @Override
     public String toString() {
