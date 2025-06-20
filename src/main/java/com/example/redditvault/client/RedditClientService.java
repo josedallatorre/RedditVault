@@ -183,7 +183,8 @@ public class RedditClientService {
                         redditChildren.getRedditSavedItem().getId(),
                         redditChildren.getRedditSavedItem().getAuthor(),
                         redditChildren.getRedditSavedItem().getTitle(),
-                        url
+                        url,
+                        redditChildren.getRedditSavedItem().getSubreddit().getName()
                 );
                 posts.add(post);
                 redditPostRepository.save(post);
