@@ -16,7 +16,8 @@ function Profile() {
 
   useEffect(() => {
     fetch("http://localhost:8080/api/v1/redditclient/me", {
-      method: "POST",
+      credentials: "include",
+      method: "GET",
       headers: {
         "Content-type": "application/json",
         Authorization: redditUsername || "",
