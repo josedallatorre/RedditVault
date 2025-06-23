@@ -58,7 +58,7 @@ public class RedditController {
     }
 
     @CrossOrigin(origins = "http://localhost:5173")
-    @PostMapping("/me")
+    @GetMapping("/me")
     public ResponseEntity<String> getUserInfo(@RequestBody User user) {
         String username = user.getUsername();
         try {
