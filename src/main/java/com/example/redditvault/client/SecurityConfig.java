@@ -40,8 +40,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/","/api/v1/redditclient/auth",
-                                "api/v1/redditclient/oauth/callback", "info",
-                                "/api/v1/redditclient/me", "api/v1/redditclient/saved",
+                                "/api/v1/redditclient/oauth/callback", "/info",
+                                "/api/v1/redditclient/me", "/api/v1/redditclient/saved",
                                 "/api/v1/subreddit","/api/v1/subreddit/subreddits").permitAll()
                         //.anyRequest().authenticated()
                 );
