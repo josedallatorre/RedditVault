@@ -110,7 +110,7 @@ public class RedditClientService {
             return "Failed to exchange code for token: " + e.getMessage();
         }
     }
-    private String fetchUsername(String accessToken) throws IOException, InterruptedException {
+    public String fetchUsername(String accessToken) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://oauth.reddit.com/api/v1/me"))
                 .header("Authorization", "bearer " + accessToken)
