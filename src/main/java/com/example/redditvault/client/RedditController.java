@@ -2,8 +2,10 @@ package com.example.redditvault.client;
 
 import com.example.redditvault.redditPost.RedditPost;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +37,8 @@ public class RedditController {
      }
 
      @GetMapping(path = "/oauth/callback")
-    public ResponseEntity<Void>  oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
+    public ResponseEntity<Void>  oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state,
+                                               HttpServletResponse response) {
          String redditUsername;
 
          try {
@@ -44,6 +48,15 @@ public class RedditController {
              URI errorRedirect = URI.create("http://localhost:5173/?error=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
              return ResponseEntity.status(HttpStatus.FOUND).location(errorRedirect).build();
          }
+         ResponseCookie cookie = ResponseCookie.from("authToken", redditUsername)
+                 .httpOnly(true)
+                 .secure(false) // set to true if using HTTPS
+                 .sameSite("Lax")
+                 .path("/")
+                 .maxAge(Duration.ofHours(1))
+                 .build();
+
+         response.addHeader("Set-Cookie", cookie.toString());
 
          // Redirect with the username
          URI redirectUri = URI.create("http://localhost:5173/?username=" + URLEncoder.encode(redditUsername, StandardCharsets.UTF_8));
@@ -57,12 +70,15 @@ public class RedditController {
         return authentication.getPrincipal().getAttributes();
     }
 
-    @CrossOrigin(origins = "http://localhost:5173")
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @GetMapping("/me")
-    public ResponseEntity<String> getUserInfo(@RequestBody User user) {
-        String username = user.getUsername();
+    public ResponseEntity<String> getUserInfo(@CookieValue(name = "authToken", required = false) String authToken) {
+        System.out.println(authToken);
+        if (authToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing auth token");
+        }
         try {
-            String userJson = redditClientService.getUserInfo(username);
+            String userJson = redditClientService.getUserInfo(authToken);
             return ResponseEntity.ok(userJson);
         } catch (Exception e) {
             e.printStackTrace();
