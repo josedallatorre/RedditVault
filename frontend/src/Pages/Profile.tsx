@@ -20,11 +20,7 @@ function Profile() {
       method: "GET",
       headers: {
         "Content-type": "application/json",
-        Authorization: redditUsername || "",
       },
-      body: JSON.stringify({
-        username: redditUsername, // or separate username if needed
-      }),
     })
       .then(async (response) => {
         if (!response.ok) {
