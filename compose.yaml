@@ -1,4 +1,10 @@
 services:
+  frontend:
+    image: 'node:alpine'
+    build:
+      context: frontend
+    ports:
+      - "5173:5173"
   database:
     image: 'postgres:15.2'
     ports:
@@ -7,7 +13,3 @@ services:
       - 'POSTGRES_USER=myuser'
       - 'POSTGRES_DB=post'
       - 'POSTGRES_PASSWORD=secret'
-  frontend:
-    image: 'node:alpine'
-    ports:
-      - "5173:5173"
