@@ -1,6 +1,5 @@
 services:
   frontend:
-    image: 'node:alpine'
     build:
       context: frontend
     ports:
