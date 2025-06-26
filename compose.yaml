@@ -7,3 +7,7 @@ services:
       - 'POSTGRES_USER=myuser'
       - 'POSTGRES_DB=post'
       - 'POSTGRES_PASSWORD=secret'
+  frontend:
+    image: 'node:alpine'
+    ports:
+      - "5173:5173"
