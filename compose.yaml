@@ -1,4 +1,9 @@
 services:
+  frontend:
+    build:
+      context: frontend
+    ports:
+      - "5173:5173"
   database:
     image: 'postgres:15.2'
     ports:
