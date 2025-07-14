@@ -68,5 +68,12 @@ public class RedditToken {
         this.expiresAt = expiresAt;
     }
 
+    public String getRedditVaultToken() {
+        return redditVaultToken;
+    }
+
+    public void setRedditVaultToken(String redditVaultToken) {
+        this.redditVaultToken = redditVaultToken;
+    }
 }
 
