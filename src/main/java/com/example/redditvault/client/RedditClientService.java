@@ -101,7 +101,7 @@ public class RedditClientService {
             token.setRefreshToken(refreshToken);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
             token.setRedditUsername(redditUsername);
-
+            token.setRedditVaultToken(redditVaultToken);
             redditTokenRepository.save(token);
 
             return redditUsername;
