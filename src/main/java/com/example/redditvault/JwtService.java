@@ -16,7 +16,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    private static String SECRET_KEY = "redditvault";
+    private static String SECRET_KEY = "UVplVkcrcDhRRkQ4M2E4WGZnbXZuU25SUjRWak9pYzc0RHVOYkY4K3VDTWdXYnM3bjNRU3dDeGYvSVNJY2dnK25CNWVFSjFnNnkyT1Y4RWY4WHZISC9SUU5PQmYrOXpBc3R2bFpFaWQxTnZrSFlGeXFBNFhpT01qdktOYmtHd29WYlQ1Q3Izck1mbUdXZjBxeHptRFEvWnFwSnRBcW9XcW16Ym9NeU9CcWJ1bkVhUE9seUp1Nk1XUnRGNmFSUEE2dHdzUmM1aVkxRzBpcUpXNTJXTHlWbGRsVEJyaTBjU1FXdmFkWmhDd3lrYUtEdGM3ZWtoNVE3TEJ3Sm9IQUpYZTBpTHVzUEpGWDRkaTF2dDk3VkxBTW5KZVUvSWVUdUloWGZGQXNaV0RFV3ZBaTVLcjI4MS84bDFKVjkrZmZjNXBFeTFHWHd0YjBPb1BvZjhia2xHbmtpQjFlVkFjYlVqNkMvRHpuQ1pVVDFJPQ==";
     public String extractUsername(String token){
         return extractClaim(token, Claims::getSubject);
     }
@@ -35,7 +35,7 @@ public class JwtService {
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 60))
+                .setExpiration(new Date(System.currentTimeMillis() +100 + 60*60*1000))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
