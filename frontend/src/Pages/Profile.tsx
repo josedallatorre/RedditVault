@@ -11,6 +11,7 @@ type RedditUser = {
 
 function Profile() {
   const redditUsername = localStorage.getItem("redditUsername");
+  const token = localStorage.getItem("token");
   const [user, setUser] = useState<RedditUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,6 +21,7 @@ function Profile() {
       method: "GET",
       headers: {
         "Content-type": "application/json",
+        Authorization: "Bearer " + token || "",
       },
     })
       .then(async (response) => {
