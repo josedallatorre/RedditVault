@@ -14,12 +14,13 @@ function Subreddit() {
     useEffect(() => {
         async function fetchSubreddits() {
             const redditUsername = localStorage.getItem("redditUsername");
+            const token = localStorage.getItem("token");
             try {
                 const res = await fetch("http://localhost:8080/api/v1/subreddit/subreddits", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: redditUsername || "",
+                        Authorization: "Bearer " + token || "",
                     },
                     body: JSON.stringify({
                         username: redditUsername, // or separate username if needed
