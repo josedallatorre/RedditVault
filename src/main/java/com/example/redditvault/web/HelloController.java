@@ -13,6 +13,7 @@ public class HelloController {
         this.authenticationService = authenticationService;
     }
 
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(@RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authenticationService.register(request));
