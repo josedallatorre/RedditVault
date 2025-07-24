@@ -4,6 +4,8 @@ services:
       context: frontend
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend:/app
   database:
     image: 'postgres:15.2'
     ports:
