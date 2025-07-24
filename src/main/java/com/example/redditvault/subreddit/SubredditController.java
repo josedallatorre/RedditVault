@@ -15,6 +15,7 @@ public class SubredditController {
     public SubredditController(SubredditService subredditService) {
         this.subredditService = subredditService;
     }
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("subreddits")
     public List<Subreddit> getSubreddits() {
         return subredditService.getAllSubreddits();
