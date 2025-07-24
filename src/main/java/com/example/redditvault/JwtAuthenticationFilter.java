@@ -25,7 +25,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (request.getServletPath().startsWith("/api/v1/auth")) {
+        if (request.getServletPath().startsWith("/api/v1/auth") || request.getServletPath().startsWith("/api/v1/redditclient/auth") ||
+        request.getServletPath().startsWith("/api/v1/redditclient/oauth/callback")
+        ) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -47,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
-            filterChain.doFilter(request, response);
         }
+        filterChain.doFilter(request, response);
     }
 }
