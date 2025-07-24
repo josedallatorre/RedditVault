@@ -7,6 +7,7 @@ import com.example.redditvault.subreddit.SubredditRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -171,7 +172,12 @@ public class RedditClientService {
                 //if (postOptional.isPresent()) {
                     //throw new IllegalStateException("Post author already exists");
                 //}
-                subredditRepository.save(redditChildren.getRedditSavedItem().getSubreddit());
+                String subredditName = redditChildren.getRedditSavedItem().getSubreddit().getName();
+                try {
+                    subredditRepository.save(new Subreddit(subredditName));
+                } catch (DataIntegrityViolationException e) {
+                    // Subreddit might have just been saved in another request — safe to ignore
+                }
                 String url;
                 if (redditChildren.getRedditSavedItem().getSecure_media() != null &&
                         redditChildren.getRedditSavedItem().getSecure_media().getReddit_video() != null){
