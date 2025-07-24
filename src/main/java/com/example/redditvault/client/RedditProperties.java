@@ -20,7 +20,7 @@ public class RedditProperties {
     private String redirectUri;
 
     // Step 3. Get token
-    public static final String OAUTH_TOKEN_URL = "https://ssl.reddit.com/api/v1/access_token";
+    public static final String OAUTH_TOKEN_URL = "https://www.reddit.com/api/v1/access_token";
 
     public static final String ME_URL = "https://oauth.reddit.com/api/v1/me";
 
