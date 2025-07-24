@@ -64,7 +64,7 @@ public class SecurityConfig {
         this.authenticationProvider = authenticationProvider;
     }
 
-
+/*
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
@@ -77,7 +77,7 @@ public class SecurityConfig {
             }
         };
     }
-
+*/
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
