@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import RegisterForm from "../components/RegisterForm";
 
 
 function Home() {
@@ -34,6 +35,7 @@ function Home() {
                     Securely archive and access all your saved Reddit posts and comments in one easy-to-use vault.
                 </p>
             </header>
+                  <RegisterForm />
             <div>
 
                 {username ? (
