@@ -36,7 +36,7 @@ function Home() {
                 </p>
             </header>
                   <RegisterForm />
-            <div className="flex flex-row justify-center">
+            <div className="flex flex-row justify-center p-3">
 
                 {username ? (
                     <p>Welcome, {username}!</p>
