@@ -88,10 +88,12 @@ public class RedditController {
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/saved")
-    public List<RedditPost> getUserSaved(@RequestBody User user)throws Exception {
-        String username = user.getUsername();
-        return redditClientService.getUserSaved(username);
-        //return ResponseEntity.ok(userJson);
+    public ResponseEntity<SavedPageResponse> getUserSaved(@RequestBody SavedRequest request)throws Exception {
+        String username = request.getUsername();
+        String after = request.getAfter();
+        SavedPageResponse page = redditClientService.getUserSaved(username, after);
+        return ResponseEntity.ok(page);
+
     }
     @PostMapping("/download")
     public void downloadRedditMedia(@RequestBody List<DownloadRequest> requests) throws IOException {
