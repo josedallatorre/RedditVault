@@ -91,7 +91,8 @@ function SavedPost() {
     );
 
   return (
-    <div className="my-5 p-5 bg-gray-50 rounded-xl font-sans">
+      //TODO: change the background color, this color it's only use to highlight different components
+    <div className="my-5 p-5 bg-gray-600 rounded-xl font-sans">
       {posts.length === 0 && (
         <p className="text-center text-gray-600 italic mt-8">No videos saved.</p>
       )}
@@ -160,7 +161,7 @@ function SavedPost() {
           <div className="text-center mt-6">
             <button
                 onClick={fetchPosts}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                className="px-4 py-2 bg-black text-white rounded hover:bg-blue-700 transition"
             >
               {loadingMore ? "Loading..." : "Load More"}
             </button>
