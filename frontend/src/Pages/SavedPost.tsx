@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 
-type ApiResponse = RedditMedia[];
+type SavedPostsResponse = {
+  posts: RedditMedia[];
+  after: string | null;
+};
+
 type RedditMedia = {
   id: string;
   author: string;
@@ -8,6 +12,8 @@ type RedditMedia = {
   url: string;
   subreddit: string;
 };
+
+
 
 function getMediaType(url: string): "video" | "gif" | "image" | "gallery" | "unknown" {
   if (url.includes("v.redd.it")) return "video";
@@ -18,51 +24,59 @@ function getMediaType(url: string): "video" | "gif" | "image" | "gallery" | "unk
 }
 
 function SavedPost() {
-  const [posts, setMedia] = useState<RedditMedia[]>([]);
+  const [posts, setPosts] = useState<RedditMedia[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [after, setAfter] = useState<string | null>(null);
+
+  const fetchPosts = async () => {
+    const redditUsername = localStorage.getItem("redditUsername");
+    const token = localStorage.getItem("token");
+    if (posts.length === 0) {
+      setInitialLoading(true);
+    } else {
+      setLoadingMore(true);
+    }    setError(null);
+    try {
+      const res = await fetch("http://localhost:8080/api/v1/redditclient/saved", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          username: redditUsername,
+          after: after,// or separate username if needed
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const json: SavedPostsResponse = await res.json();
+      console.log(json);
+      if (json?.posts?.length) {
+        setPosts((prev) => [...prev, ...json.posts]);
+        setAfter(json.after);
+        setHasMore(json.after !== null);
+      } else {
+        setHasMore(false); // No more posts
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch videos");
+    } finally {
+      setInitialLoading(false);
+      setLoadingMore(false);    }
+  }
 
   useEffect(() => {
-    async function fetchPosts() {
-      const redditUsername = localStorage.getItem("redditUsername");
-      const token = localStorage.getItem("token");
-      try {
-        const res = await fetch("http://localhost:8080/api/v1/redditclient/saved", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            username: redditUsername, // or separate username if needed
-          }),
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
-        const json: ApiResponse = await res.json();
-        console.log(json);
-
-        if (json && Array.isArray(json)) {
-          const posts = json.map((child) => child);
-          console.log(posts);
-          setMedia(posts);
-        } else {
-          throw new Error("Unexpected API response format");
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch videos");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchPosts();
   }, []);
 
-  if (loading)
+  if (initialLoading)
     return (
       <p className="text-center mt-10 text-lg text-gray-700 font-medium">
         Loading...
@@ -136,10 +150,22 @@ function SavedPost() {
                     </p>
                   );
               }
-            })()}
+            }
+            )()}
+
           </div>
         );
       })}
+      {hasMore && !initialLoading && (
+          <div className="text-center mt-6">
+            <button
+                onClick={fetchPosts}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              {loadingMore ? "Loading..." : "Load More"}
+            </button>
+          </div>
+      )}
     </div>
   );
 }
