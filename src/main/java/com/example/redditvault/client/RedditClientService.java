@@ -150,55 +150,62 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public List<RedditPost> getUserSaved(String username)throws Exception {
+    public List<RedditPost> getUserSaved(String username) throws Exception {
         String accessToken = getAccessToken(username);
-        System.out.println("Access token for " + username + ": " + accessToken);
+        String after = null;
+        List<RedditPost> posts = new ArrayList<>();
+
+        for (int i = 0; i < 3; i++) {
+            String url = "https://oauth.reddit.com/user/" + username + "/saved";
+            if (after != null) {
+                url += "?after=" + after;
+            }
+
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(String.format("https://oauth.reddit.com/user/%s/saved", username)))
+                    .uri(new URI(url))
                     .header("Authorization", "Bearer " + accessToken)
                     .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
                     .GET()
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            RedditResponse redditResponse = objectMapper.readValue(response.body(), RedditResponse.class);
 
-            System.out.println(response.body());
-            RedditResponse redditResponse;
-            redditResponse = objectMapper.readValue(response.body(), RedditResponse.class);
-            List<RedditChildren> redditChildrenn = redditResponse.getData().getChildren();
-            List<RedditPost> posts = new ArrayList<>();
-            for (RedditChildren redditChildren : redditChildrenn) {
-                //Optional<Subreddit> subredditOptional = subredditRepository.
-                //if (postOptional.isPresent()) {
-                    //throw new IllegalStateException("Post author already exists");
-                //}
-                String subredditName = redditChildren.getRedditSavedItem().getSubreddit().getName();
+            List<RedditChildren> children = redditResponse.getData().getChildren();
+            if (children == null || children.isEmpty()) break;
+
+            for (RedditChildren redditChildren : children) {
+                RedditSavedItem item = redditChildren.getRedditSavedItem();
+                String subredditName = item.getSubreddit().getName();
+
                 try {
                     subredditRepository.save(new Subreddit(subredditName));
-                } catch (DataIntegrityViolationException e) {
-                    // Subreddit might have just been saved in another request — safe to ignore
-                }
-                String url;
-                if (redditChildren.getRedditSavedItem().getSecure_media() != null &&
-                        redditChildren.getRedditSavedItem().getSecure_media().getReddit_video() != null){
-                    url = redditChildren.getRedditSavedItem().getSecure_media().getReddit_video().getFallback_url();
-                }else {
-                    url = redditChildren.getRedditSavedItem().getUrl();
-                }
+                } catch (DataIntegrityViolationException ignored) {}
+
+                String urlToSave = (item.getSecure_media() != null && item.getSecure_media().getReddit_video() != null)
+                        ? item.getSecure_media().getReddit_video().getFallback_url()
+                        : item.getUrl();
+
                 RedditPost post = new RedditPost(
-                        redditChildren.getRedditSavedItem().getId(),
-                        redditChildren.getRedditSavedItem().getAuthor(),
-                        redditChildren.getRedditSavedItem().getTitle(),
-                        url,
-                        redditChildren.getRedditSavedItem().getSubreddit().getName()
+                        item.getId(),
+                        item.getAuthor(),
+                        item.getTitle(),
+                        urlToSave,
+                        subredditName
                 );
+
                 posts.add(post);
                 redditPostRepository.save(post);
             }
 
-            return posts;
+            // Get the next page token
+            after = redditResponse.getData().getAfter();
+            if (after == null) break;
+        }
 
+        return posts;
     }
+
 
     public List<DownloadRequest> scrapeMediaFromPost(String accessToken,String redditPostUrl) {
         List<DownloadRequest> mediaItems = new ArrayList<>();
