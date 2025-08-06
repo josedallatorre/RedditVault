@@ -150,30 +150,27 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public List<RedditPost> getUserSaved(String username) throws Exception {
+    public SavedPageResponse getUserSaved(String username, String after) throws Exception {
         String accessToken = getAccessToken(username);
-        String after = null;
+        String url = "https://oauth.reddit.com/user/" + username + "/saved?limit=25";
+        if (after != null) {
+            url += "&after=" + after;
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI(url))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        RedditResponse redditResponse = objectMapper.readValue(response.body(), RedditResponse.class);
+
+        List<RedditChildren> children = redditResponse.getData().getChildren();
         List<RedditPost> posts = new ArrayList<>();
 
-        for (int i = 0; i < 3; i++) {
-            String url = "https://oauth.reddit.com/user/" + username + "/saved";
-            if (after != null) {
-                url += "?after=" + after;
-            }
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(url))
-                    .header("Authorization", "Bearer " + accessToken)
-                    .header("User-Agent", "java:springboot.reddit.oauth:v1.0 (by /u/your_reddit_username)")
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            RedditResponse redditResponse = objectMapper.readValue(response.body(), RedditResponse.class);
-
-            List<RedditChildren> children = redditResponse.getData().getChildren();
-            if (children == null || children.isEmpty()) break;
-
+        if (children != null) {
             for (RedditChildren redditChildren : children) {
                 RedditSavedItem item = redditChildren.getRedditSavedItem();
                 String subredditName = item.getSubreddit().getName();
@@ -197,14 +194,11 @@ public class RedditClientService {
                 posts.add(post);
                 redditPostRepository.save(post);
             }
-
-            // Get the next page token
-            after = redditResponse.getData().getAfter();
-            if (after == null) break;
         }
 
-        return posts;
+        return new SavedPageResponse(redditResponse.getData().getAfter(), posts);
     }
+
 
 
     public List<DownloadRequest> scrapeMediaFromPost(String accessToken,String redditPostUrl) {
