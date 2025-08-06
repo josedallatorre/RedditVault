@@ -96,6 +96,7 @@ function SavedPost() {
       {posts.length === 0 && (
         <p className="text-center text-gray-600 italic mt-8">No videos saved.</p>
       )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
       {posts.map((post, idx) => {
         const mediaType = getMediaType(post.url);
         return (
@@ -121,7 +122,7 @@ function SavedPost() {
                 case "video":
                   return (
                     <video
-                      className="rounded-lg max-w-full shadow-md"
+                      className="rounded-lg shadow-md w-48 h-32 object-contain"
                       controls
                       width={480}
                       src={post.url}
@@ -132,7 +133,7 @@ function SavedPost() {
                   return (
                     <div className="max-w-full lg:max-w-lg border border-red-500">
                     <img
-                      className="rounded-lg sm:max-size-20  shadow-md"
+                      className="rounded-lg shadow-md w-48 h-32 object-contain"
                       src={post.url}
                       alt={post.title}
                     />
@@ -157,8 +158,9 @@ function SavedPost() {
           </div>
         );
       })}
+    </div>
       {hasMore && !initialLoading && (
-          <div className="text-center mt-6">
+          <div className="flex items-center justify-center text-center mt-6">
             <button
                 onClick={fetchPosts}
                 className="px-4 py-2 bg-black text-white rounded hover:bg-blue-700 transition"
