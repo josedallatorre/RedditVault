@@ -150,7 +150,7 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
-    public SavedPageResponse getUserSaved(String username, String after) throws Exception {
+    public SavedPageResponse fetchUserSaved(String username, String after) throws Exception {
         String accessToken = getAccessToken(username);
         String url = "https://oauth.reddit.com/user/" + username + "/saved?limit=25";
         if (after != null) {
@@ -199,9 +199,14 @@ public class RedditClientService {
         return new SavedPageResponse(redditResponse.getData().getAfter(), posts);
     }
 
+    public SavedPageResponse getUserSaved(String username, String after) throws Exception {
+        return new SavedPageResponse("",List.of());
+    }
 
 
-    public List<DownloadRequest> scrapeMediaFromPost(String accessToken,String redditPostUrl) {
+
+
+        public List<DownloadRequest> scrapeMediaFromPost(String accessToken,String redditPostUrl) {
         List<DownloadRequest> mediaItems = new ArrayList<>();
         String jsonUrl = redditPostUrl + ".json";
 
