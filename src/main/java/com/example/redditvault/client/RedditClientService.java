@@ -201,8 +201,12 @@ public class RedditClientService {
         return new SavedPageResponse(redditResponse.getData().getAfter(), posts);
     }
 
-    public Optional<RedditPost> getUserSaved(String username, String after) throws Exception {
-        return redditPostRepository.findPostsByRedditUsername(username);
+    public List<Optional<RedditPost>> getUserSaved(String username, String after) throws Exception {
+        List<Optional<RedditPost>> postOptional = redditPostRepository.findPostsByRedditUsername(username);
+        if (postOptional.isEmpty()) {
+            throw new IllegalStateException("The user didn't save any posts");
+        }
+        return postOptional;
     }
 
 
