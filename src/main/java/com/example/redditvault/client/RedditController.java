@@ -98,7 +98,7 @@ public class RedditController {
     public ResponseEntity<SavedPageResponse> fetchUserSaved(@RequestBody SavedRequest request)throws Exception {
         String username = request.getUsername();
         String after = request.getAfter();
-        SavedPageResponse page = redditClientService.getUserSaved(username, after);
+        SavedPageResponse page = redditClientService.fetchUserSaved(username, after);
         return ResponseEntity.ok(page);
 
     }
