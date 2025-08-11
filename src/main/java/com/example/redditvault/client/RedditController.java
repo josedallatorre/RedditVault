@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.awt.print.Pageable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -18,6 +19,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -87,11 +89,11 @@ public class RedditController {
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/saved")
-    public ResponseEntity<RedditPost> getUserSaved(@RequestBody SavedRequest request)throws Exception {
+    public ResponseEntity<List<Optional<RedditPost>>> getUserSaved(@RequestBody SavedRequest request)throws Exception {
         String username = request.getUsername();
         String after = request.getAfter();
-        RedditPost page = redditClientService.getUserSaved(username, after);
-        return ResponseEntity.ok(page);
+        List<Optional<RedditPost>> posts = redditClientService.getUserSaved(username, after);
+        return ResponseEntity.ok(posts);
 
     }
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
