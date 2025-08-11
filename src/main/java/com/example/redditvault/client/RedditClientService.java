@@ -2,6 +2,7 @@ package com.example.redditvault.client;
 
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.redditPost.RedditPostRepository;
+import com.example.redditvault.redditPost.RedditPostService;
 import com.example.redditvault.subreddit.Subreddit;
 import com.example.redditvault.subreddit.SubredditRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -188,7 +189,8 @@ public class RedditClientService {
                         item.getAuthor(),
                         item.getTitle(),
                         urlToSave,
-                        subredditName
+                        subredditName,
+                        username
                 );
 
                 posts.add(post);
@@ -199,8 +201,8 @@ public class RedditClientService {
         return new SavedPageResponse(redditResponse.getData().getAfter(), posts);
     }
 
-    public SavedPageResponse getUserSaved(String username, String after) throws Exception {
-        return new SavedPageResponse("",List.of());
+    public Optional<RedditPost> getUserSaved(String username, String after) throws Exception {
+        return redditPostRepository.findPostsByRedditUsername(username);
     }
 
 
