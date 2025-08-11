@@ -1,5 +1,6 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.redditPost.RedditPost;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -86,10 +87,10 @@ public class RedditController {
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/saved")
-    public ResponseEntity<SavedPageResponse> getUserSaved(@RequestBody SavedRequest request)throws Exception {
+    public ResponseEntity<RedditPost> getUserSaved(@RequestBody SavedRequest request)throws Exception {
         String username = request.getUsername();
         String after = request.getAfter();
-        SavedPageResponse page = redditClientService.getUserSaved(username, after);
+        RedditPost page = redditClientService.getUserSaved(username, after);
         return ResponseEntity.ok(page);
 
     }
