@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface RedditPostRepository extends JpaRepository<RedditPost, Long> {
     Optional<RedditPost> findPostByAuthor(String author);
+    Optional<RedditPost> findPostsByRedditUsername(String redditUsername);
 }
