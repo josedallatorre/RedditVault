@@ -41,6 +41,7 @@ public class RedditClientService {
     private final RedditTokenRepository redditTokenRepository;
     private final SubredditRepository subredditRepository;
     private final RedditPostRepository redditPostRepository;
+
     @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
                                RedditTokenRepository redditTokenRepository, SubredditRepository subredditRepository,
@@ -52,7 +53,7 @@ public class RedditClientService {
         this.redditPostRepository = redditPostRepository;
     }
 
-    public ResponseEntity<String> getAuthUrl(){
+    public ResponseEntity<String> getAuthUrl() {
         //TODO: generate a random state and then check if a request of auth is valid
         String state = "prova";
         String url = String.format(
@@ -63,7 +64,7 @@ public class RedditClientService {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
-    public String exchangeCodeForToken(String code, String state){
+    public String exchangeCodeForToken(String code, String state) {
         try {
             String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
             String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
@@ -112,6 +113,7 @@ public class RedditClientService {
             return "Failed to exchange code for token: " + e.getMessage();
         }
     }
+
     public String fetchUsername(String accessToken) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://oauth.reddit.com/api/v1/me"))
@@ -151,6 +153,7 @@ public class RedditClientService {
             return "Failed to fetch user info: " + e.getMessage();
         }
     }
+
     public SavedPageResponse fetchUserSaved(String username, String after) throws Exception {
         String accessToken = getAccessToken(username);
         String url = "https://oauth.reddit.com/user/" + username + "/saved?limit=25";
@@ -178,7 +181,8 @@ public class RedditClientService {
 
                 try {
                     subredditRepository.save(new Subreddit(subredditName));
-                } catch (DataIntegrityViolationException ignored) {}
+                } catch (DataIntegrityViolationException ignored) {
+                }
 
                 String urlToSave = (item.getSecure_media() != null && item.getSecure_media().getReddit_video() != null)
                         ? item.getSecure_media().getReddit_video().getFallback_url()
@@ -201,6 +205,67 @@ public class RedditClientService {
         return new SavedPageResponse(redditResponse.getData().getAfter(), posts);
     }
 
+    public void fetchAllUserSaved(User user) throws Exception {
+        String username = user.getUsername();
+        String accessToken = getAccessToken(username);
+        String after = null;
+        do {
+            String url = "https://oauth.reddit.com/user/" + username + "/saved?limit=25";
+            if (after != null) {
+                url += "&after=" + after;
+            }
+
+            String finalUrl = url;
+            String json = webClient.get()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("User-Agent", "Mozilla/5.0")
+
+                    //.doOnSuccess(clientResponse -> System.out.println("clientResponse.statusCode() = " + clientResponse.statusCode()))
+                    .retrieve()
+                    .onStatus(
+                            status -> status.value() == 429,
+                            response -> {
+                                System.err.println("429 Too Many Requests: " + finalUrl);
+                                System.err.println(response.headers());
+                                // Retry after a delay
+                                return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
+                                        .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
+                            }
+                    )
+                    .bodyToMono(String.class)
+                    .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
+                    .block(); // blocking because scrape must finish before download
+
+            RedditResponse redditResponse = objectMapper.readValue(json, RedditResponse.class);
+            List<RedditChildren> children = redditResponse.getData().getChildren();
+            for (RedditChildren redditChildren : children) {
+                RedditSavedItem item = redditChildren.getRedditSavedItem();
+                String subredditName = item.getSubreddit().getName();
+
+                try {
+                    subredditRepository.save(new Subreddit(subredditName));
+                } catch (DataIntegrityViolationException ignored) {
+                }
+
+                String urlToSave = (item.getSecure_media() != null && item.getSecure_media().getReddit_video() != null)
+                        ? item.getSecure_media().getReddit_video().getFallback_url()
+                        : item.getUrl();
+
+                RedditPost post = new RedditPost(
+                        item.getId(),
+                        item.getAuthor(),
+                        item.getTitle(),
+                        urlToSave,
+                        subredditName,
+                        username
+                );
+                redditPostRepository.save(post);
+            }
+            after = redditResponse.getData().getAfter();
+        } while (after != null);
+    }
+
     public List<Optional<RedditPost>> getUserSaved(String username, String after) throws Exception {
         List<Optional<RedditPost>> postOptional = redditPostRepository.findPostsByRedditUsername(username);
         if (postOptional.isEmpty()) {
@@ -210,39 +275,37 @@ public class RedditClientService {
     }
 
 
-
-
-        public List<DownloadRequest> scrapeMediaFromPost(String accessToken,String redditPostUrl) {
+    public List<DownloadRequest> scrapeMediaFromPost(String accessToken, String redditPostUrl) {
         List<DownloadRequest> mediaItems = new ArrayList<>();
         String jsonUrl = redditPostUrl + ".json";
 
         String json = null;
         int attempt = 0;
         try {
-                json = webClient.get()
-                        .uri(jsonUrl)
-                        .header("Authorization", "Bearer " + accessToken)
-                        .header("User-Agent", "Mozilla/5.0")
+            json = webClient.get()
+                    .uri(jsonUrl)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("User-Agent", "Mozilla/5.0")
 
-                        //.doOnSuccess(clientResponse -> System.out.println("clientResponse.statusCode() = " + clientResponse.statusCode()))
-                        .retrieve()
-                        .onStatus(
-                                status -> status.value() == 429,
-                                response -> {
-                                    System.err.println("429 Too Many Requests: " + jsonUrl);
-                                    System.err.println(response.headers().toString());
-                                    // Retry after a delay
-                                    return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
-                                            .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
-                                }
-                        )
-                        .bodyToMono(String.class)
-                        .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
-                        .block(); // blocking because scrape must finish before download
+                    //.doOnSuccess(clientResponse -> System.out.println("clientResponse.statusCode() = " + clientResponse.statusCode()))
+                    .retrieve()
+                    .onStatus(
+                            status -> status.value() == 429,
+                            response -> {
+                                System.err.println("429 Too Many Requests: " + jsonUrl);
+                                System.err.println(response.headers().toString());
+                                // Retry after a delay
+                                return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
+                                        .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
+                            }
+                    )
+                    .bodyToMono(String.class)
+                    .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
+                    .block(); // blocking because scrape must finish before download
 
-            } catch (Exception e) {
-                System.err.println("Retrying after error: " + e.getMessage());
-            }
+        } catch (Exception e) {
+            System.err.println("Retrying after error: " + e.getMessage());
+        }
 
         // Process the retrieved JSON if the request was successful
         try {
@@ -273,7 +336,6 @@ public class RedditClientService {
     }
 
 
-
     private boolean isImage(String url) {
         return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
     }
@@ -282,6 +344,7 @@ public class RedditClientService {
         String extension = url.substring(url.lastIndexOf("."));
         return UUID.randomUUID().toString() + extension;
     }
+
     public void download(String urlStr, String file) throws IOException {
         URL url = new URL(urlStr);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
