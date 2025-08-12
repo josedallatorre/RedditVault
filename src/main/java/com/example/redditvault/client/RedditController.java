@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
@@ -85,6 +86,13 @@ public class RedditController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @Async
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+    @PostMapping("/all-saved")
+    public void fetchAllUserSaved(@RequestBody User username)throws Exception {
+        redditClientService.fetchAllUserSaved(username);
     }
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
