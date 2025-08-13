@@ -5,8 +5,6 @@ import com.example.redditvault.redditPost.RedditPostRepository;
 import com.example.redditvault.redditPost.RedditPostService;
 import com.example.redditvault.subreddit.Subreddit;
 import com.example.redditvault.subreddit.SubredditRepository;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -36,6 +37,7 @@ public class RedditClientService {
     private final HttpClient client = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper;
     private final WebClient webClient = WebClient.builder()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
             .build();
     private final RedditTokenRepository redditTokenRepository;
     private final SubredditRepository subredditRepository;
@@ -208,7 +210,6 @@ public class RedditClientService {
         String username = user.getUsername();
         String accessToken = getAccessToken(username);
         String after = null;
-        JsonFactory factory = new JsonFactory(objectMapper);
         do {
             String url = "https://oauth.reddit.com/user/" + username + "/saved?limit=25";
             if (after != null) {
@@ -216,7 +217,7 @@ public class RedditClientService {
             }
 
             String finalUrl = url;
-            InputStream inputStream = webClient.get()
+            String json = webClient.get()
                     .uri(url)
                     .header("Authorization", "Bearer " + accessToken)
                     .header("User-Agent", "Mozilla/5.0")
@@ -233,38 +234,36 @@ public class RedditClientService {
                                         .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
                             }
                     )
-                    .bodyToMono(InputStream.class)
+                    .bodyToMono(String.class)
                     .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
                     .block(); // blocking because scrape must finish before download
 
-            try (JsonParser parser = factory.createParser(inputStream)) {
-                RedditResponse redditResponse = objectMapper.readValue(parser, RedditResponse.class);
-                List<RedditChildren> children = redditResponse.getData().getChildren();
-                for (RedditChildren redditChildren : children) {
-                    RedditSavedItem item = redditChildren.getRedditSavedItem();
-                    String subredditName = item.getSubreddit().getName();
+            RedditResponse redditResponse = objectMapper.readValue(json, RedditResponse.class);
+            List<RedditChildren> children = redditResponse.getData().getChildren();
+            for (RedditChildren redditChildren : children) {
+                RedditSavedItem item = redditChildren.getRedditSavedItem();
+                String subredditName = item.getSubreddit().getName();
 
-                    try {
-                        subredditRepository.save(new Subreddit(subredditName));
-                    } catch (DataIntegrityViolationException ignored) {
-                    }
-
-                    String urlToSave = (item.getSecure_media() != null && item.getSecure_media().getReddit_video() != null)
-                            ? item.getSecure_media().getReddit_video().getFallback_url()
-                            : item.getUrl();
-
-                    RedditPost post = new RedditPost(
-                            item.getId(),
-                            item.getAuthor(),
-                            item.getTitle(),
-                            urlToSave,
-                            subredditName,
-                            username
-                    );
-                    redditPostRepository.save(post);
+                try {
+                    subredditRepository.save(new Subreddit(subredditName));
+                } catch (DataIntegrityViolationException ignored) {
                 }
-                after = redditResponse.getData().getAfter();
+
+                String urlToSave = (item.getSecure_media() != null && item.getSecure_media().getReddit_video() != null)
+                        ? item.getSecure_media().getReddit_video().getFallback_url()
+                        : item.getUrl();
+
+                RedditPost post = new RedditPost(
+                        item.getId(),
+                        item.getAuthor(),
+                        item.getTitle(),
+                        urlToSave,
+                        subredditName,
+                        username
+                );
+                redditPostRepository.save(post);
             }
+            after = redditResponse.getData().getAfter();
         } while (after != null);
     }
 
