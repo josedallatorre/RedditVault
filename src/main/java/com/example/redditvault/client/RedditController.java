@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.WebAsyncTask;
 
 import java.awt.print.Pageable;
 import java.io.FileNotFoundException;
@@ -88,11 +89,14 @@ public class RedditController {
         }
     }
 
-    @Async
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/all-saved")
-    public void fetchAllUserSaved(@RequestBody User username)throws Exception {
-        redditClientService.fetchAllUserSaved(username);
+    public WebAsyncTask<String> fetchAllUserSaved(@RequestBody User username)throws Exception {
+        return new WebAsyncTask<String>(20000L,()->{
+            redditClientService.fetchAllUserSaved(username);
+            return String.format("Successfully fetched all user saved: %s", username);
+        });
+
     }
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
