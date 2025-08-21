@@ -10,7 +10,11 @@ services:
     image: 'postgres:15.2'
     ports:
       - '5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
     environment:
       - 'POSTGRES_USER=myuser'
       - 'POSTGRES_DB=post'
       - 'POSTGRES_PASSWORD=secret'
+volumes:
+  db-data:

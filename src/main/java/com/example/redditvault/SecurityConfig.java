@@ -80,7 +80,7 @@ public class SecurityConfig {
 */
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter) throws Exception {
         // @formatter:off
         http
                 .cors(Customizer.withDefaults())
