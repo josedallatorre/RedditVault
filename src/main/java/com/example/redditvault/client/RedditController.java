@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.async.WebAsyncTask;
+import reactor.core.publisher.Flux;
 
 import java.awt.print.Pageable;
 import java.io.FileNotFoundException;
@@ -18,20 +19,19 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping(path = "api/v1/redditclient")
 public class RedditController {
     private final RedditClientService redditClientService;
+    private final JobStatusRepository jobStatusRepository;
 
     @Autowired
-    public RedditController(RedditClientService redditClientService) {
+    public RedditController(RedditClientService redditClientService, JobStatusRepository jobStatusRepository) {
         this.redditClientService = redditClientService;
+        this.jobStatusRepository = jobStatusRepository;
     }
 
      @GetMapping(path = "/auth")
@@ -91,12 +91,26 @@ public class RedditController {
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/all-saved")
-    public WebAsyncTask<String> fetchAllUserSaved(@RequestBody User username)throws Exception {
-        return new WebAsyncTask<String>(20000L,()->{
-            redditClientService.fetchAllUserSaved(username);
-            return String.format("Successfully fetched all user saved: %s", username);
-        });
+    public ResponseEntity<Map<String, String>> fetchAllUserSaved(@RequestBody User user) throws Exception {
+        String jobId = UUID.randomUUID().toString();
 
+        JobStatus job = new JobStatus();
+        job.setJobId(jobId);
+        job.setUsername(user.getUsername());
+        job.setStatus("PENDING");
+        jobStatusRepository.save(job);
+
+        // async call
+        redditClientService.startFetchJob(jobId, user);
+
+        return ResponseEntity.ok(Map.of("jobId", jobId));
+    }
+
+    @GetMapping("/status/{jobId}")
+    public ResponseEntity<JobStatus> getStatus(@PathVariable String jobId) {
+        return jobStatusRepository.findById(jobId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
