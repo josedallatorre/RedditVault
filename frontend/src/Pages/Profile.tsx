@@ -11,19 +11,18 @@ type RedditUser = {
 
 function Profile() {
   const redditUsername = localStorage.getItem("redditUsername");
+  const token = localStorage.getItem("token");
   const [user, setUser] = useState<RedditUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("http://localhost:8080/api/v1/redditclient/me", {
-      method: "POST",
+      credentials: "include",
+      method: "GET",
       headers: {
         "Content-type": "application/json",
-        Authorization: redditUsername || "",
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        username: redditUsername, // or separate username if needed
-      }),
     })
       .then(async (response) => {
         if (!response.ok) {

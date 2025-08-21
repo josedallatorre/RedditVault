@@ -1,31 +1,37 @@
 package com.example.redditvault.client;
 
 import com.example.redditvault.redditPost.RedditPost;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.WebAsyncTask;
+import reactor.core.publisher.Flux;
 
+import java.awt.print.Pageable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping(path = "api/v1/redditclient")
 public class RedditController {
     private final RedditClientService redditClientService;
+    private final JobStatusRepository jobStatusRepository;
 
     @Autowired
-    public RedditController(RedditClientService redditClientService) {
+    public RedditController(RedditClientService redditClientService, JobStatusRepository jobStatusRepository) {
         this.redditClientService = redditClientService;
+        this.jobStatusRepository = jobStatusRepository;
     }
 
      @GetMapping(path = "/auth")
@@ -34,7 +40,8 @@ public class RedditController {
      }
 
      @GetMapping(path = "/oauth/callback")
-    public ResponseEntity<Void>  oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state) {
+    public ResponseEntity<Void>  oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state,
+                                               HttpServletResponse response) {
          String redditUsername;
 
          try {
@@ -44,6 +51,15 @@ public class RedditController {
              URI errorRedirect = URI.create("http://localhost:5173/?error=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
              return ResponseEntity.status(HttpStatus.FOUND).location(errorRedirect).build();
          }
+         ResponseCookie cookie = ResponseCookie.from("authToken", redditUsername)
+                 .httpOnly(true)
+                 .secure(false) // set to true if using HTTPS
+                 .sameSite("Lax")
+                 .path("/")
+                 .maxAge(Duration.ofHours(1))
+                 .build();
+
+         response.addHeader("Set-Cookie", cookie.toString());
 
          // Redirect with the username
          URI redirectUri = URI.create("http://localhost:5173/?username=" + URLEncoder.encode(redditUsername, StandardCharsets.UTF_8));
@@ -57,12 +73,15 @@ public class RedditController {
         return authentication.getPrincipal().getAttributes();
     }
 
-    @CrossOrigin(origins = "http://localhost:5173")
-    @PostMapping("/me")
-    public ResponseEntity<String> getUserInfo(@RequestBody User user) {
-        String username = user.getUsername();
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+    @GetMapping("/me")
+    public ResponseEntity<String> getUserInfo(@CookieValue(name = "authToken", required = false) String authToken) {
+        System.out.println(authToken);
+        if (authToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing auth token");
+        }
         try {
-            String userJson = redditClientService.getUserInfo(username);
+            String userJson = redditClientService.getUserInfo(authToken);
             return ResponseEntity.ok(userJson);
         } catch (Exception e) {
             e.printStackTrace();
@@ -70,12 +89,47 @@ public class RedditController {
         }
     }
 
-    @CrossOrigin(origins = "http://localhost:5173")
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+    @PostMapping("/all-saved")
+    public ResponseEntity<Map<String, String>> fetchAllUserSaved(@RequestBody User user) throws Exception {
+        String jobId = UUID.randomUUID().toString();
+
+        JobStatus job = new JobStatus();
+        job.setJobId(jobId);
+        job.setUsername(user.getUsername());
+        job.setStatus("PENDING");
+        jobStatusRepository.save(job);
+
+        // async call
+        redditClientService.startFetchJob(jobId, user);
+
+        return ResponseEntity.ok(Map.of("jobId", jobId));
+    }
+
+    @GetMapping("/status/{jobId}")
+    public ResponseEntity<JobStatus> getStatus(@PathVariable String jobId) {
+        return jobStatusRepository.findById(jobId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/saved")
-    public List<RedditPost> getUserSaved(@RequestBody User user)throws Exception {
-        String username = user.getUsername();
-        return redditClientService.getUserSaved(username);
-        //return ResponseEntity.ok(userJson);
+    public ResponseEntity<List<Optional<RedditPost>>> getUserSaved(@RequestBody SavedRequest request)throws Exception {
+        String username = request.getUsername();
+        String after = request.getAfter();
+        List<Optional<RedditPost>> posts = redditClientService.getUserSaved(username, after);
+        return ResponseEntity.ok(posts);
+
+    }
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+    @PostMapping("/status")
+    public ResponseEntity<SavedPageResponse> fetchUserSaved(@RequestBody SavedRequest request)throws Exception {
+        String username = request.getUsername();
+        String after = request.getAfter();
+        SavedPageResponse page = redditClientService.fetchUserSaved(username, after);
+        return ResponseEntity.ok(page);
+
     }
     @PostMapping("/download")
     public void downloadRedditMedia(@RequestBody List<DownloadRequest> requests) throws IOException {
