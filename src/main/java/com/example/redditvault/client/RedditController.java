@@ -106,6 +106,23 @@ public class RedditController {
         return ResponseEntity.ok(Map.of("jobId", jobId));
     }
 
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+    @PostMapping("/all-media")
+    public ResponseEntity<Map<String, String>> fetchAllUserSavedMedia(@RequestBody User user) throws Exception {
+        String jobId = UUID.randomUUID().toString();
+
+        JobStatus job = new JobStatus();
+        job.setJobId(jobId);
+        job.setUsername(user.getUsername());
+        job.setStatus("PENDING");
+        jobStatusRepository.save(job);
+
+        // async call
+        redditClientService.startFetchJob(jobId, user);
+
+        return ResponseEntity.ok(Map.of("jobId", jobId));
+    }
+
     @GetMapping("/status/{jobId}")
     public ResponseEntity<JobStatus> getStatus(@PathVariable String jobId) {
         return jobStatusRepository.findById(jobId)
