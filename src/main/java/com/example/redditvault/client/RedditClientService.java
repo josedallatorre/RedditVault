@@ -249,6 +249,7 @@ public class RedditClientService {
                                                     : item.getUrl();
                                     // add here
                                     scrapeMediaFromPost(accessToken, item.getId());
+                                    //TODO: need to download also the media
                                     RedditPost post = new RedditPost(
                                             item.getId(),
                                             item.getAuthor(),
@@ -381,7 +382,7 @@ public class RedditClientService {
     }
 
 
-    public List<DownloadRequest> scrapeMediaFromPost(String accessToken, String redditPostUrl) {
+    public void scrapeMediaFromPost(String accessToken, String redditPostUrl) {
         List<DownloadRequest> mediaItems = new ArrayList<>();
         String jsonUrl = redditPostUrl + ".json";
 
@@ -437,8 +438,6 @@ public class RedditClientService {
         } catch (Exception e) {
             System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
         }
-
-        return mediaItems;
     }
 
 
