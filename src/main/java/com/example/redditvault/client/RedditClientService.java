@@ -247,7 +247,8 @@ public class RedditClientService {
                                                     item.getSecure_media().getReddit_video() != null)
                                                     ? item.getSecure_media().getReddit_video().getFallback_url()
                                                     : item.getUrl();
-
+                                    // add here
+                                    scrapeMediaFromPost(accessToken, item.getId());
                                     RedditPost post = new RedditPost(
                                             item.getId(),
                                             item.getAuthor(),
