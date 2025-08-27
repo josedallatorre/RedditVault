@@ -5,6 +5,7 @@ import com.example.redditvault.redditPost.RedditPostRepository;
 import com.example.redditvault.redditPost.RedditPostService;
 import com.example.redditvault.subreddit.Subreddit;
 import com.example.redditvault.subreddit.SubredditRepository;
+import com.example.redditvault.subreddit.SubredditService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
@@ -45,18 +47,18 @@ public class RedditClientService {
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
             .build();
     private final RedditTokenRepository redditTokenRepository;
-    private final SubredditRepository subredditRepository;
     private final RedditPostRepository redditPostRepository;
     private final JobStatusRepository jobStatusRepository;
+    private final SubredditService subredditService;
 
     @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
-                               RedditTokenRepository redditTokenRepository, SubredditRepository subredditRepository,
+                               RedditTokenRepository redditTokenRepository, SubredditService subredditService,
                                RedditPostRepository redditPostRepository, JobStatusRepository jobStatusRepository) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
         this.redditTokenRepository = redditTokenRepository;
-        this.subredditRepository = subredditRepository;
+        this.subredditService = subredditService;
         this.redditPostRepository = redditPostRepository;
         this.jobStatusRepository = jobStatusRepository;
     }
@@ -185,10 +187,10 @@ public class RedditClientService {
         if (children != null) {
             for (RedditChildren redditChildren : children) {
                 RedditSavedItem item = redditChildren.getRedditSavedItem();
-                String subredditName = item.getSubreddit().getName();
+                String subredditId = item.getSubreddit().getSubredditId();
 
                 try {
-                    subredditRepository.save(new Subreddit(subredditName));
+                    subredditService.addNewSubreddit(new Subreddit(subredditId));
                 } catch (DataIntegrityViolationException ignored) {
                 }
 
@@ -201,7 +203,7 @@ public class RedditClientService {
                         item.getAuthor(),
                         item.getTitle(),
                         urlToSave,
-                        subredditName,
+                        subredditId,
                         username
                 );
 
@@ -231,12 +233,12 @@ public class RedditClientService {
                         return Flux.fromIterable(children)
                                 .flatMap(rc -> {
                                     RedditSavedItem item = rc.getRedditSavedItem();
-                                    String subredditName = item.getSubreddit().getName();
+                                    String subredditId = item.getSubreddit().getSubredditId();
 
                                     // Save subreddit (blocking JPA) safely
                                     Mono<Void> saveSubreddit = Mono.fromRunnable(() -> {
                                                 try {
-                                                    subredditRepository.save(new Subreddit(subredditName));
+                                                    subredditService.addNewSubreddit(new Subreddit(subredditId));
                                                 } catch (DataIntegrityViolationException ignored) {}
                                             })
                                             .subscribeOn(Schedulers.boundedElastic())
@@ -255,7 +257,7 @@ public class RedditClientService {
                                             item.getAuthor(),
                                             item.getTitle(),
                                             urlToSave,
-                                            subredditName,
+                                            subredditId,
                                             username
                                     );
 
@@ -298,7 +300,7 @@ public class RedditClientService {
                     })
                     .delayElement(Duration.ofSeconds(1)) // gentle pacing between hits
                     .retryWhen(
-                            reactor.util.retry.Retry.max(3)
+                            Retry.max(3)
                                     .filter(ex -> ex instanceof RateLimitException)
                                     .transientErrors(true)
                                     .doBeforeRetry(rs -> {
@@ -383,9 +385,8 @@ public class RedditClientService {
 
 
     public void scrapeMediaFromPost(String accessToken, String redditPostUrl) {
-        List<DownloadRequest> mediaItems = new ArrayList<>();
         String jsonUrl = redditPostUrl + ".json";
-
+        DownloadRequest downloadRequest = null;
         String json = null;
         int attempt = 0;
         try {
@@ -423,18 +424,18 @@ public class RedditClientService {
 
             String url = postData.get("url").asText();
             boolean isVideo = postData.get("is_video").asBoolean();
-
             if (isImage(url)) {
                 String filename = generateFilename(url);
-                mediaItems.add(new DownloadRequest(url, filename));
+                downloadRequest = new DownloadRequest(url, filename);
             } else if (isVideo) {
                 JsonNode media = postData.get("media");
                 if (media != null && media.get("reddit_video") != null) {
                     String videoUrl = media.get("reddit_video").get("fallback_url").asText();
                     String filename = generateFilename(videoUrl);
-                    mediaItems.add(new DownloadRequest(videoUrl, filename));
+                    downloadRequest = new DownloadRequest(videoUrl, filename);
                 }
             }
+            download(downloadRequest.getUrl(), downloadRequest.getFilename());
         } catch (Exception e) {
             System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
         }
