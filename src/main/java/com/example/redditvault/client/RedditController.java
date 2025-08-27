@@ -163,6 +163,7 @@ public class RedditController {
         ).join();
     }
 
+    /*
     @PostMapping("/scrape")
     public String scrapeAndDownload(@RequestHeader("Authorization") String bearerToken,@RequestBody List<Post> posts) throws FileNotFoundException {
         List<DownloadRequest> allMediaItems = new ArrayList<>();
@@ -188,4 +189,5 @@ public class RedditController {
 
         return "Scraped and downloaded " + allMediaItems.size() + " items.";
     }
+     */
 }
