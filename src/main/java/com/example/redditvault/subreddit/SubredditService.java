@@ -21,10 +21,12 @@ public class SubredditService {
     }
 
     public void addNewSubreddit(Subreddit subreddit) {
+        /*
         Optional<Subreddit> subredditOptional =  subredditRepository.findSubredditByName(subreddit.getName());
         if (subredditOptional.isPresent()) {
             throw new IllegalStateException("Subreddit name already exists");
         }
+         */
         subredditRepository.save(subreddit);
         System.out.println(subreddit);
     }
