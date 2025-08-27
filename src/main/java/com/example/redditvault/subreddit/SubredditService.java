@@ -1,6 +1,5 @@
 package com.example.redditvault.subreddit;
 
-import com.example.redditvault.redditPost.RedditPost;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
