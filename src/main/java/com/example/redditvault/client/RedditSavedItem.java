@@ -17,6 +17,7 @@ public class RedditSavedItem {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private RedditMedia secure_media;
     private String url;
+    private String permalink;
 
     public RedditMedia getSecure_media() {
         return secure_media;
@@ -81,5 +82,9 @@ public class RedditSavedItem {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+    public String getPermalink() {return permalink;}
+    public void setPermalink(String permalink) {
+        this.permalink = permalink;
     }
 }
