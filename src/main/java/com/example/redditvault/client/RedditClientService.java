@@ -2,9 +2,7 @@ package com.example.redditvault.client;
 
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.redditPost.RedditPostRepository;
-import com.example.redditvault.redditPost.RedditPostService;
 import com.example.redditvault.subreddit.Subreddit;
-import com.example.redditvault.subreddit.SubredditRepository;
 import com.example.redditvault.subreddit.SubredditService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +20,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
+import java.awt.image.DataBuffer;
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -33,6 +32,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -249,9 +249,7 @@ public class RedditClientService {
                                                     item.getSecure_media().getReddit_video() != null)
                                                     ? item.getSecure_media().getReddit_video().getFallback_url()
                                                     : item.getUrl();
-                                    // add here
-                                    scrapeMediaFromPost(accessToken, item.getId());
-                                    //TODO: need to download also the media
+
                                     RedditPost post = new RedditPost(
                                             item.getId(),
                                             item.getAuthor(),
@@ -265,7 +263,12 @@ public class RedditClientService {
                                             Mono.fromCallable(() -> redditPostRepository.save(post))
                                                     .subscribeOn(Schedulers.boundedElastic());
 
-                                    return saveSubreddit.then(savePost);
+                                    // Scrape media after save
+                                    Mono<Void> scrapePost = scrapeMediaFromPost(accessToken, item.getPermalink());
+
+                                    return saveSubreddit.then(savePost)
+                                            .flatMap(saved -> scrapePost.thenReturn(saved))
+                                            ;
                                 });
                     });
         }
@@ -384,62 +387,70 @@ public class RedditClientService {
     }
 
 
-    public void scrapeMediaFromPost(String accessToken, String redditPostUrl) {
-        String jsonUrl = redditPostUrl + ".json";
-        DownloadRequest downloadRequest = null;
-        String json = null;
-        int attempt = 0;
-        try {
-            json = webClient.get()
-                    .uri(jsonUrl)
-                    .header("Authorization", "Bearer " + accessToken)
-                    .header("User-Agent", "Mozilla/5.0")
+    public Mono<Void> scrapeMediaFromPost(String accessToken, String permalink) {
+        // Build the JSON endpoint properly
+        String jsonUrl = "https://oauth.reddit.com" + permalink + ".json";
 
-                    //.doOnSuccess(clientResponse -> System.out.println("clientResponse.statusCode() = " + clientResponse.statusCode()))
-                    .retrieve()
-                    .onStatus(
-                            status -> status.value() == 429,
-                            response -> {
-                                System.err.println("429 Too Many Requests: " + jsonUrl);
-                                System.err.println(response.headers().toString());
-                                // Retry after a delay
-                                return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
-                                        .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
+        return webClient.get()
+                .uri(jsonUrl)
+                .header("Authorization", "Bearer " + accessToken)
+                .header("User-Agent", "Mozilla/5.0")
+                .retrieve()
+                .onStatus(status -> status.value() == 429, response -> {
+                    System.err.println("429 Too Many Requests: " + jsonUrl);
+                    return Mono.delay(Duration.ofSeconds(2))
+                            .flatMap(d -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
+                })
+                .onStatus(status ->status.value() == 403,response ->{
+                    System.err.println("403 Forbidden: " + jsonUrl);
+                    return Mono.empty();
+                })
+                .bodyToMono(String.class)
+                .delaySubscription(Duration.ofSeconds(1))
+                .flatMap(json -> {
+                    try {
+                        ObjectMapper mapper = new ObjectMapper();
+                        JsonNode root = mapper.readTree(json);
+                        JsonNode postData = root.get(0).get("data").get("children").get(0).get("data");
+
+                        // Extract correct media url
+                        String mediaUrl = null;
+                        if (postData.has("is_video") && postData.get("is_video").asBoolean()) {
+                            JsonNode media = postData.get("media");
+                            if (media != null && media.has("reddit_video")) {
+                                mediaUrl = media.get("reddit_video").get("fallback_url").asText();
                             }
-                    )
-                    .bodyToMono(String.class)
-                    .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
-                    .block(); // blocking because scrape must finish before download
+                        }
+                        if (mediaUrl == null && postData.has("url")) {
+                            mediaUrl = postData.get("url").asText();
+                        }
 
-        } catch (Exception e) {
-            System.err.println("Retrying after error: " + e.getMessage());
-        }
-
-        // Process the retrieved JSON if the request was successful
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(json);
-
-            JsonNode postData = root.get(0).get("data").get("children").get(0).get("data");
-
-            String url = postData.get("url").asText();
-            boolean isVideo = postData.get("is_video").asBoolean();
-            if (isImage(url)) {
-                String filename = generateFilename(url);
-                downloadRequest = new DownloadRequest(url, filename);
-            } else if (isVideo) {
-                JsonNode media = postData.get("media");
-                if (media != null && media.get("reddit_video") != null) {
-                    String videoUrl = media.get("reddit_video").get("fallback_url").asText();
-                    String filename = generateFilename(videoUrl);
-                    downloadRequest = new DownloadRequest(videoUrl, filename);
-                }
-            }
-            download(downloadRequest.getUrl(), downloadRequest.getFilename());
-        } catch (Exception e) {
-            System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
-        }
+                        if (mediaUrl != null) {
+                            String filename = generateFilename(mediaUrl);
+                            final String finalMediaUrl = mediaUrl;
+                            return Mono.fromRunnable(() -> {
+                                        try {
+                                            download(finalMediaUrl, filename);
+                                        } catch (IOException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    })
+                                    .subscribeOn(Schedulers.boundedElastic());
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
+                    }
+                    return Mono.empty();
+                })
+                .onErrorResume(e -> {
+                    // catch any other errors and continue
+                    System.err.println("Error scraping post: " + permalink + " -> " + e.getMessage());
+                    return Mono.empty();
+                })
+                .then();
     }
+
+
 
 
     private boolean isImage(String url) {
@@ -455,6 +466,8 @@ public class RedditClientService {
         URL url = new URL(urlStr);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
+        // Add a proper User-Agent (otherwise Reddit often rejects with 400/403)
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; RedditDownloader/1.0)");
 
         int responseCode = connection.getResponseCode();
         if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
@@ -464,15 +477,17 @@ public class RedditClientService {
         }
 
         try (BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
-             FileOutputStream fis = new FileOutputStream(file)) {
+             FileOutputStream fos = new FileOutputStream(file)) {
 
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[8192]; // bigger buffer for faster downloads
             int count;
             while ((count = bis.read(buffer)) != -1) {
-                fis.write(buffer, 0, count);
+                fos.write(buffer, 0, count);
             }
         } finally {
             connection.disconnect();
         }
     }
+
+
 }
