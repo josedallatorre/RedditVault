@@ -391,7 +391,11 @@ public class RedditClientService {
         String jsonUrl = "https://oauth.reddit.com" + permalink + ".json";
 
         return webClient.get()
-                .uri(jsonUrl)
+                .uri(uriBuilder -> uriBuilder
+                        .path(permalink + ".json")
+                        .queryParam("raw_json", "1")  // prevents HTML entities like &amp;
+                        .queryParam("include_over_18", "1") // allow NSFW
+                        .build())
                 .header("Authorization", "Bearer " + accessToken)
                 .header("User-Agent", "Mozilla/5.0")
                 .retrieve()
