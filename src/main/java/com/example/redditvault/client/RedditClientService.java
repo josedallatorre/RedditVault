@@ -414,7 +414,17 @@ public class RedditClientService {
                     try {
                         ObjectMapper mapper = new ObjectMapper();
                         JsonNode root = mapper.readTree(json);
-                        JsonNode postData = root.get(0).get("data").get("children").get(0).get("data");
+                        // Ensure response is the expected array
+                        if (!root.isArray() || root.size() == 0) {
+                            System.err.println("Unexpected JSON structure: " + json);
+                            return Mono.empty();
+                        }
+
+                        JsonNode postData = root.get(0).path("data").path("children").get(0).path("data");
+                        if (postData.isMissingNode() || postData.isNull()) {
+                            System.err.println("Could not extract post data from: " + jsonUrl);
+                            return Mono.empty();
+                        }
 
                         List<String> mediaUrls = new ArrayList<>();
 
