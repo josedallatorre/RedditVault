@@ -388,7 +388,6 @@ public class RedditClientService {
 
 
     public Mono<Void> scrapeMediaFromPost(String accessToken, String permalink) {
-        // Build the JSON endpoint properly
         String jsonUrl = "https://oauth.reddit.com" + permalink + ".json";
 
         return webClient.get()
@@ -401,7 +400,7 @@ public class RedditClientService {
                     return Mono.delay(Duration.ofSeconds(2))
                             .flatMap(d -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
                 })
-                .onStatus(status ->status.value() == 403,response ->{
+                .onStatus(status -> status.value() == 403, response -> {
                     System.err.println("403 Forbidden: " + jsonUrl);
                     return Mono.empty();
                 })
@@ -413,42 +412,68 @@ public class RedditClientService {
                         JsonNode root = mapper.readTree(json);
                         JsonNode postData = root.get(0).get("data").get("children").get(0).get("data");
 
-                        // Extract correct media url
-                        String mediaUrl = null;
+                        List<String> mediaUrls = new ArrayList<>();
+
+                        // 1. Reddit-hosted video
                         if (postData.has("is_video") && postData.get("is_video").asBoolean()) {
-                            JsonNode media = postData.get("media");
+                            JsonNode media = postData.get("secure_media");
                             if (media != null && media.has("reddit_video")) {
-                                mediaUrl = media.get("reddit_video").get("fallback_url").asText();
+                                mediaUrls.add(media.get("reddit_video").get("fallback_url").asText());
                             }
                         }
-                        if (mediaUrl == null && postData.has("url")) {
-                            mediaUrl = postData.get("url").asText();
+
+                        // 2. Direct link (RedGIFs, Imgur, etc.)
+                        if (postData.has("url_overridden_by_dest")) {
+                            mediaUrls.add(postData.get("url_overridden_by_dest").asText());
                         }
 
-                        if (mediaUrl != null) {
-                            String filename = generateFilename(mediaUrl);
-                            final String finalMediaUrl = mediaUrl;
-                            return Mono.fromRunnable(() -> {
-                                        try {
-                                            download(finalMediaUrl, filename);
-                                        } catch (IOException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                    })
-                                    .subscribeOn(Schedulers.boundedElastic());
+                        // 3. Preview images
+                        if (postData.has("preview") && postData.get("preview").has("images")) {
+                            for (JsonNode img : postData.get("preview").get("images")) {
+                                String url = img.get("source").get("url").asText().replaceAll("&amp;", "&");
+                                mediaUrls.add(url);
+                            }
                         }
+
+                        // 4. Gallery posts
+                        if (postData.has("media_metadata")) {
+                            JsonNode mediaMetadata = postData.get("media_metadata");
+                            mediaMetadata.fields().forEachRemaining(entry -> {
+                                JsonNode item = entry.getValue();
+                                if (item.has("s") && item.get("s").has("u")) {
+                                    String url = item.get("s").get("u").asText().replaceAll("&amp;", "&");
+                                    mediaUrls.add(url);
+                                }
+                            });
+                        }
+
+                        if (!mediaUrls.isEmpty()) {
+                            return Flux.fromIterable(mediaUrls)
+                                    .flatMap(mediaUrl -> {
+                                        String filename = generateFilename(mediaUrl);
+                                        return Mono.fromRunnable(() -> {
+                                            try {
+                                                download(mediaUrl, filename);
+                                            } catch (IOException e) {
+                                                throw new RuntimeException(e);
+                                            }
+                                        }).subscribeOn(Schedulers.boundedElastic());
+                                    })
+                                    .then();
+                        }
+
                     } catch (Exception e) {
                         System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
                     }
                     return Mono.empty();
                 })
                 .onErrorResume(e -> {
-                    // catch any other errors and continue
                     System.err.println("Error scraping post: " + permalink + " -> " + e.getMessage());
                     return Mono.empty();
                 })
                 .then();
     }
+
 
 
 
