@@ -264,7 +264,7 @@ public class RedditClientService {
                                                     .subscribeOn(Schedulers.boundedElastic());
 
                                     // Scrape media after save
-                                    Mono<Void> scrapePost = scrapeMediaFromPost(accessToken, item.getPermalink());
+                                    Mono<Void> scrapePost = scrapeMediaFromPost(accessToken, urlToSave);
 
                                     return saveSubreddit.then(savePost)
                                             .flatMap(saved -> scrapePost.thenReturn(saved))
@@ -388,14 +388,29 @@ public class RedditClientService {
 
 
     public Mono<Void> scrapeMediaFromPost(String accessToken, String permalink) {
-        String jsonUrl = "https://oauth.reddit.com" + permalink + ".json";
+        if (permalink == null || permalink.isEmpty()) return Mono.empty();
+        if (permalink.contains("i.redd.it") || permalink.contains("v.redd.it")) {
+            int i = permalink.indexOf("?source=fallback");
+            if (i != -1) {
+                permalink = permalink.substring(0, i);
+            }
+            // Direct media → download immediately
+            String filename = generateFilename(permalink);
+            String finalPermalink = permalink;
+            return Mono.fromRunnable(() -> {
+                try {
+                    download(finalPermalink, filename);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }).subscribeOn(Schedulers.boundedElastic()).then();
+        }
+
+        // Otherwise, treat as a Reddit post permalink
+        String jsonUrl = permalink.endsWith(".json") ? permalink : permalink + ".json";
 
         return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path(permalink + ".json")
-                        .queryParam("raw_json", "1")  // prevents HTML entities like &amp;
-                        .queryParam("include_over_18", "1") // allow NSFW
-                        .build())
+                .uri(URI.create(jsonUrl + "?raw_json=1&include_over_18=1"))
                 .header("Authorization", "Bearer " + accessToken)
                 .header("User-Agent", "Mozilla/5.0")
                 .retrieve()
@@ -414,8 +429,8 @@ public class RedditClientService {
                     try {
                         ObjectMapper mapper = new ObjectMapper();
                         JsonNode root = mapper.readTree(json);
-                        // Ensure response is the expected array
-                        if (!root.isArray() || root.size() == 0) {
+
+                        if (!root.isArray() || root.isEmpty()) {
                             System.err.println("Unexpected JSON structure: " + json);
                             return Mono.empty();
                         }
@@ -428,7 +443,7 @@ public class RedditClientService {
 
                         List<String> mediaUrls = new ArrayList<>();
 
-                        // 1. Reddit-hosted video
+                        // 1. Video
                         if (postData.has("is_video") && postData.get("is_video").asBoolean()) {
                             JsonNode media = postData.get("secure_media");
                             if (media != null && media.has("reddit_video")) {
@@ -436,29 +451,23 @@ public class RedditClientService {
                             }
                         }
 
-                        // 2. Direct link (RedGIFs, Imgur, etc.)
-                        if (postData.has("url_overridden_by_dest")) {
-                            mediaUrls.add(postData.get("url_overridden_by_dest").asText());
-                        }
-
-                        // 3. Preview images
-                        if (postData.has("preview") && postData.get("preview").has("images")) {
-                            for (JsonNode img : postData.get("preview").get("images")) {
-                                String url = img.get("source").get("url").asText().replaceAll("&amp;", "&");
-                                mediaUrls.add(url);
+                        // 2. Gallery
+                        else if (postData.has("is_gallery") && postData.get("is_gallery").asBoolean()) {
+                            JsonNode mediaMetadata = postData.get("media_metadata");
+                            if (mediaMetadata != null) {
+                                mediaMetadata.fields().forEachRemaining(entry -> {
+                                    JsonNode item = entry.getValue();
+                                    if (item.has("s") && item.get("s").has("u")) {
+                                        String url = item.get("s").get("u").asText().replaceAll("&amp;", "&");
+                                        mediaUrls.add(url);
+                                    }
+                                });
                             }
                         }
 
-                        // 4. Gallery posts
-                        if (postData.has("media_metadata")) {
-                            JsonNode mediaMetadata = postData.get("media_metadata");
-                            mediaMetadata.fields().forEachRemaining(entry -> {
-                                JsonNode item = entry.getValue();
-                                if (item.has("s") && item.get("s").has("u")) {
-                                    String url = item.get("s").get("u").asText().replaceAll("&amp;", "&");
-                                    mediaUrls.add(url);
-                                }
-                            });
+                        // 3. Single image or external link
+                        else if (postData.has("url_overridden_by_dest")) {
+                            mediaUrls.add(postData.get("url_overridden_by_dest").asText());
                         }
 
                         if (!mediaUrls.isEmpty()) {
@@ -482,14 +491,11 @@ public class RedditClientService {
                     return Mono.empty();
                 })
                 .onErrorResume(e -> {
-                    System.err.println("Error scraping post: " + permalink + " -> " + e.getMessage());
+                    System.err.println("Error scraping post: " + jsonUrl + " -> " + e.getMessage());
                     return Mono.empty();
                 })
                 .then();
     }
-
-
-
 
 
     private boolean isImage(String url) {
