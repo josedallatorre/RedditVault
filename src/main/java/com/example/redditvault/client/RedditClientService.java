@@ -452,8 +452,8 @@ public class RedditClientService {
                                 mediaUrls.add(media.get("reddit_video").get("fallback_url").asText());
                             }
                         }
-
                         // 2. Gallery
+                        //TODO: check if is working properly, should download all images in gallery
                         else if (postData.has("is_gallery") && postData.get("is_gallery").asBoolean()) {
                             JsonNode mediaMetadata = postData.get("media_metadata");
                             if (mediaMetadata != null) {
