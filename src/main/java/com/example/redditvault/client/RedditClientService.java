@@ -426,6 +426,7 @@ public class RedditClientService {
                 .bodyToMono(String.class)
                 .delaySubscription(Duration.ofSeconds(1))
                 .flatMap(json -> {
+                    // TODO: create a proper model for Reddit post JSON
                     try {
                         ObjectMapper mapper = new ObjectMapper();
                         JsonNode root = mapper.readTree(json);
