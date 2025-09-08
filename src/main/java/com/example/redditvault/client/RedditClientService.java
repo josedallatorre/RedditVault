@@ -444,6 +444,7 @@ public class RedditClientService {
                         List<String> mediaUrls = new ArrayList<>();
 
                         // 1. Video
+                        // TODO: download audio if present
                         if (postData.has("is_video") && postData.get("is_video").asBoolean()) {
                             JsonNode media = postData.get("secure_media");
                             if (media != null && media.has("reddit_video")) {
