@@ -499,7 +499,7 @@ public class RedditClientService {
                 .then();
     }
 
-
+    // this is not utilized at the moment, but could be useful in the future
     private boolean isImage(String url) {
         return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
     }
