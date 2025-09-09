@@ -472,6 +472,7 @@ public class RedditClientService {
                             mediaUrls.add(postData.get("url_overridden_by_dest").asText());
                         }
 
+                        //TODO: check if posts has been already downloaded
                         if (!mediaUrls.isEmpty()) {
                             return Flux.fromIterable(mediaUrls)
                                     .flatMap(mediaUrl -> {
