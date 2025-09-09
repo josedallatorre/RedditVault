@@ -517,6 +517,7 @@ public class RedditClientService {
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; RedditDownloader/1.0)");
 
         int responseCode = connection.getResponseCode();
+        // TODO: handle 404 adding a flag in post (database)
         if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
             throw new FileNotFoundException("404 Not Found: " + urlStr);
         } else if (responseCode != HttpURLConnection.HTTP_OK) {
