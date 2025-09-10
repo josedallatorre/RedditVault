@@ -388,6 +388,7 @@ public class RedditClientService {
 
 
     public Mono<Void> scrapeMediaFromPost(String accessToken, String permalink) {
+        //TODO: add a flag in database if empty
         if (permalink == null || permalink.isEmpty()) return Mono.empty();
         if (permalink.contains("i.redd.it") || permalink.contains("v.redd.it")) {
             int i = permalink.indexOf("?source=fallback");
