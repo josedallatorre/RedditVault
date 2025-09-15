@@ -6,6 +6,8 @@ import com.example.redditvault.subreddit.Subreddit;
 import com.example.redditvault.subreddit.SubredditService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
@@ -50,6 +52,8 @@ public class RedditClientService {
     private final RedditPostRepository redditPostRepository;
     private final JobStatusRepository jobStatusRepository;
     private final SubredditService subredditService;
+    private static final Logger jsonLogger = LoggerFactory.getLogger("JSON_LOGGER");
+
 
     @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
@@ -414,7 +418,7 @@ public class RedditClientService {
         return webClient.get()
                 .uri(URI.create(jsonUrl + "?raw_json=1&include_over_18=1"))
                 .header("Authorization", "Bearer " + accessToken)
-                .header("User-Agent", "Mozilla/5.0")
+                .header("User-Agent", "MyRedditBot/1.0")
                 .retrieve()
                 .onStatus(status -> status.value() == 429, response -> {
                     System.err.println("429 Too Many Requests: " + jsonUrl);
@@ -430,8 +434,15 @@ public class RedditClientService {
                 .flatMap(json -> {
                     // TODO: create a proper model for Reddit post JSON
                     try {
+                        // Detect HTML response instead of JSON
+                        if (json.trim().startsWith("<")) {
+                            System.err.println("Got HTML instead of JSON from: " + jsonUrl);
+                            return Mono.empty();
+                        }
                         ObjectMapper mapper = new ObjectMapper();
                         JsonNode root = mapper.readTree(json);
+                        jsonLogger.info(root.toPrettyString()); // or postData.toPrettyString()
+
 
                         if (!root.isArray() || root.isEmpty()) {
                             System.err.println("Unexpected JSON structure: " + json);
