@@ -1,5 +1,8 @@
 package com.example.redditvault.redditPost;
+import com.example.redditvault.client.Media;
 import jakarta.persistence.*;
+import java.util.List;
+
 
 
 @Entity
@@ -12,6 +15,9 @@ public class RedditPost {
     private String url;
     private String subredditId;
     private String redditUsername;
+
+    @OneToMany(mappedBy = "redditPost", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Media> mediaList;
 
     public RedditPost() {}
 
@@ -72,6 +78,14 @@ public class RedditPost {
 
     public void setRedditUsername(String redditUsername) {
         this.redditUsername = redditUsername;
+    }
+
+    public List<Media> getMediaList() {
+        return mediaList;
+    }
+
+    public void setMediaList(List<Media> mediaList) {
+        this.mediaList = mediaList;
     }
 
     @Override
