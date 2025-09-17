@@ -1,6 +1,7 @@
 package com.example.redditvault.client;
 
 import com.example.redditvault.redditPost.RedditPost;
+import com.example.redditvault.utils.DownloadUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -154,7 +155,7 @@ public class RedditController {
                 requests.stream()
                         .map(request -> CompletableFuture.runAsync(() -> {
                             try {
-                                redditClientService.download(request.getUrl(), request.getFilename());
+                                DownloadUtils.download(request.getUrl(), request.getFilename());
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
