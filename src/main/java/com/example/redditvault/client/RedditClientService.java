@@ -34,7 +34,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -394,24 +393,6 @@ public class RedditClientService {
     public Mono<Void> scrapeMediaFromPost(String accessToken, String permalink) {
         //TODO: add a flag in database if empty
         if (permalink == null || permalink.isEmpty()) return Mono.empty();
-        // TODO: download audio if present
-        if (permalink.contains("i.redd.it") || permalink.contains("v.redd.it")) {
-            int i = permalink.indexOf("?source=fallback");
-            if (i != -1) {
-                permalink = permalink.substring(0, i);
-            }
-            // Direct media → download immediately
-            String filename = generateFilename(permalink);
-            String finalPermalink = permalink;
-            return Mono.fromRunnable(() -> {
-                try {
-                    download(finalPermalink, filename);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).subscribeOn(Schedulers.boundedElastic()).then();
-        }
-
         // Otherwise, treat as a Reddit post permalink
         String jsonUrl = permalink.endsWith(".json") ? permalink : permalink + ".json";
 
@@ -449,50 +430,21 @@ public class RedditClientService {
                             return Mono.empty();
                         }
 
+                        MediaExtractorRegistry registry = new MediaExtractorRegistry();
                         JsonNode postData = root.get(0).path("data").path("children").get(0).path("data");
+                        List<String> mediaUrls = registry.extract(postData);
                         if (postData.isMissingNode() || postData.isNull()) {
                             System.err.println("Could not extract post data from: " + jsonUrl);
                             return Mono.empty();
                         }
-
-                        List<String> mediaUrls = new ArrayList<>();
-                        //TODO: extrack logic based on media type
-                        // 1. Video
-                        // TODO: download audio if present
-                        if (postData.has("is_video") && postData.get("is_video").asBoolean()) {
-                            JsonNode media = postData.get("secure_media");
-                            if (media != null && media.has("reddit_video")) {
-                                mediaUrls.add(media.get("reddit_video").get("fallback_url").asText());
-                            }
-                        }
-                        // 2. Gallery
-                        //TODO: check if is working properly, should download all images in gallery
-                        else if (postData.has("is_gallery") && postData.get("is_gallery").asBoolean()) {
-                            JsonNode mediaMetadata = postData.get("media_metadata");
-                            if (mediaMetadata != null) {
-                                mediaMetadata.fields().forEachRemaining(entry -> {
-                                    JsonNode item = entry.getValue();
-                                    if (item.has("s") && item.get("s").has("u")) {
-                                        String url = item.get("s").get("u").asText().replaceAll("&amp;", "&");
-                                        mediaUrls.add(url);
-                                    }
-                                });
-                            }
-                        }
-
-                        // 3. Single image or external link
-                        else if (postData.has("url_overridden_by_dest")) {
-                            mediaUrls.add(postData.get("url_overridden_by_dest").asText());
-                        }
-
+                        DownloaderRegistry downloaderRegistry = new DownloaderRegistry();
                         //TODO: check if posts has been already downloaded
                         if (!mediaUrls.isEmpty()) {
                             return Flux.fromIterable(mediaUrls)
                                     .flatMap(mediaUrl -> {
-                                        String filename = generateFilename(mediaUrl);
                                         return Mono.fromRunnable(() -> {
                                             try {
-                                                download(mediaUrl, filename);
+                                                downloaderRegistry.downloadAll(List.of(mediaUrl));
                                             } catch (IOException e) {
                                                 throw new RuntimeException(e);
                                             }
@@ -518,38 +470,6 @@ public class RedditClientService {
         return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
     }
 
-    private String generateFilename(String url) {
-        String extension = url.substring(url.lastIndexOf("."));
-        return UUID.randomUUID().toString() + extension;
-    }
-
-    public void download(String urlStr, String file) throws IOException {
-        URL url = new URL(urlStr);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("GET");
-        // Add a proper User-Agent (otherwise Reddit often rejects with 400/403)
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; RedditDownloader/1.0)");
-
-        int responseCode = connection.getResponseCode();
-        // TODO: handle 404 adding a flag in post (database)
-        if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-            throw new FileNotFoundException("404 Not Found: " + urlStr);
-        } else if (responseCode != HttpURLConnection.HTTP_OK) {
-            throw new IOException("Failed to download: HTTP " + responseCode + " for " + urlStr);
-        }
-
-        try (BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
-             FileOutputStream fos = new FileOutputStream(file)) {
-
-            byte[] buffer = new byte[8192]; // bigger buffer for faster downloads
-            int count;
-            while ((count = bis.read(buffer)) != -1) {
-                fos.write(buffer, 0, count);
-            }
-        } finally {
-            connection.disconnect();
-        }
-    }
 
 
 }
