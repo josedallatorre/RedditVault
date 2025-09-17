@@ -18,6 +18,7 @@ public class RedditSavedItem {
     private RedditMedia secure_media;
     private String url;
     private String permalink;
+    private String is_video;
 
     public RedditMedia getSecure_media() {
         return secure_media;
@@ -86,5 +87,13 @@ public class RedditSavedItem {
     public String getPermalink() {return permalink;}
     public void setPermalink(String permalink) {
         this.permalink = permalink;
+    }
+
+    public boolean getIsVideo() {
+        return is_video.contains("true");
+    }
+
+    public void setIs_video(String is_video) {
+        this.is_video = is_video;
     }
 }
