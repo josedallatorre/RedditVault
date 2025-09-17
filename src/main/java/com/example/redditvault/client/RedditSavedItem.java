@@ -19,6 +19,7 @@ public class RedditSavedItem {
     private String url;
     private String permalink;
     private String is_video;
+    private String is_reddit_media_domain;
 
     public RedditMedia getSecure_media() {
         return secure_media;
@@ -93,7 +94,13 @@ public class RedditSavedItem {
         return is_video.contains("true");
     }
 
-    public void setIs_video(String is_video) {
+    public void setIsVideo(String is_video) {
         this.is_video = is_video;
+    }
+    public boolean getIsRedditMediaDomain() {
+        return is_reddit_media_domain.contains("true");
+    }
+    public void setIsRedditMediaDomain(String is_reddit_media_domain) {
+        this.is_reddit_media_domain = is_reddit_media_domain;
     }
 }
