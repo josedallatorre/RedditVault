@@ -1,7 +1,5 @@
 package com.example.redditvault.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import java.util.List;
 
 public class MediaExtractorRegistry {
@@ -11,11 +9,11 @@ public class MediaExtractorRegistry {
             new SingleImageExtractor()
     );
 
-    public List<String> extract(JsonNode postData) {
+    public List<String> extract(RedditSavedItem post) {
         return extractors.stream()
-                .filter(e -> e.supports(postData))
+                .filter(e -> e.supports(post))
                 .findFirst()
-                .map(e -> e.extractMediaUrls(postData))
+                .map(e -> e.extractMediaUrls(post))
                 .orElse(List.of());
     }
 }
