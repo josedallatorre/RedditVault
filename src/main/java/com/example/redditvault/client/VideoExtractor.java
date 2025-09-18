@@ -7,16 +7,21 @@ import java.util.List;
 
 public class VideoExtractor implements MediaExtractor {
     @Override
-    public boolean supports(JsonNode postData) {
-        return postData.has("is_video") && postData.get("is_video").asBoolean();
+    public boolean supports(RedditSavedItem post) {
+        return post.getIsVideo();
     }
 
     @Override
-    public List<String> extractMediaUrls(JsonNode postData) {
+    public List<String> extractMediaUrls(RedditSavedItem post) {
         List<String> urls = new ArrayList<>();
-        JsonNode media = postData.get("secure_media");
-        if (media != null && media.has("reddit_video")) {
-            urls.add(media.get("reddit_video").get("fallback_url").asText());
+        RedditMedia media = post.getSecure_media();
+        if (media != null && media.getReddit_video() != null) {
+            String url = media.getReddit_video().getFallback_url();
+            int i = url.indexOf("?source=fallback");
+            if (i != -1) {
+                url = url.substring(0, i);
+            }
+            urls.add(url);
         }
         return urls;
     }
