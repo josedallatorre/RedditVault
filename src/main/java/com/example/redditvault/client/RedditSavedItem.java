@@ -3,6 +3,7 @@ import com.example.redditvault.subreddit.Subreddit;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RedditSavedItem {
@@ -19,7 +20,11 @@ public class RedditSavedItem {
     private String url;
     private String permalink;
     private String is_video;
+    @JsonProperty("is_reddit_media_domain")
     private String is_reddit_media_domain;
+    private String url_overridden_by_dest;
+    private String is_gallery;
+    private Map<String, MediaMetadata> media_metadata;
 
     public RedditMedia getSecure_media() {
         return secure_media;
@@ -91,16 +96,50 @@ public class RedditSavedItem {
     }
 
     public boolean getIsVideo() {
-        return is_video.contains("true");
+        if (is_video != null && !is_video.equals("")) {
+            return is_video.equals("true");
+        }
+        return false;
     }
 
     public void setIsVideo(String is_video) {
         this.is_video = is_video;
     }
     public boolean getIsRedditMediaDomain() {
-        return is_reddit_media_domain.contains("true");
+        if (is_reddit_media_domain != null && !is_reddit_media_domain.equals("")) {
+            return is_reddit_media_domain.equals("true");
+        }
+        return false;
     }
     public void setIsRedditMediaDomain(String is_reddit_media_domain) {
         this.is_reddit_media_domain = is_reddit_media_domain;
+    }
+    public String getUrl_overridden_by_dest() {
+        if (url_overridden_by_dest != null && !url_overridden_by_dest.equals("")) {
+            return url_overridden_by_dest;
+        }
+        return "";
+    }
+    public void setUrl_overridden_by_dest(String url_overridden_by_dest) {
+        this.url_overridden_by_dest = url_overridden_by_dest;
+    }
+
+    public boolean getIsGallery() {
+        if (is_gallery != null && !is_gallery.equals("")) {
+            return is_gallery.equals("true");
+        }
+        return false;
+        }
+
+    public void setIs_gallery(String is_gallery) {
+        this.is_gallery = is_gallery;
+    }
+
+    public Map<String, MediaMetadata> getMedia_metadata() {
+        return media_metadata;
+    }
+
+    public void setMedia_metadata(Map<String, MediaMetadata> media_metadata) {
+        this.media_metadata = media_metadata;
     }
 }
