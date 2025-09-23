@@ -1,7 +1,4 @@
 package com.example.redditvault.client;
-
-import com.fasterxml.jackson.databind.JsonNode;
-
 import java.util.ArrayList;
 import java.util.List;
 
