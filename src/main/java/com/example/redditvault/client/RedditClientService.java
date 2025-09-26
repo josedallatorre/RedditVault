@@ -393,7 +393,7 @@ public class RedditClientService {
     public Mono<Void> scrapeMediaFromPost(RedditSavedItem post) {
         //TODO: add a flag in database if empty
         if (post.getUrl() == null || post.getUrl().isEmpty()) return Mono.empty();
-        jsonLogger.info(post.toString());
+        jsonLogger.info(post.getPermalink(),post.getUrl_overridden_by_dest(),post.getTitle());
 
         MediaExtractorRegistry registry = new MediaExtractorRegistry();
         List<String> mediaUrls = registry.extract(post);
@@ -404,7 +404,7 @@ public class RedditClientService {
                     .flatMap(mediaUrl -> {
                         return Mono.fromRunnable(() -> {
                             try {
-                                downloaderRegistry.downloadAll(List.of(mediaUrl));
+                                downloaderRegistry.downloadAll(post, List.of(mediaUrl));
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
