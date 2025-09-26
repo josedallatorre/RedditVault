@@ -6,8 +6,8 @@ import java.io.IOException;
 
 public class VideoDownloader implements MediaDownloader{
     @Override
-    public boolean supports(String url){
-        return url.contains("v.redd.it");
+    public boolean supports(RedditSavedItem post){
+        return post.getUrl_overridden_by_dest().startsWith("https://v.redd.it/");
     }
     @Override
     public void download(String url) throws IOException{
