@@ -407,6 +407,7 @@ public class RedditClientService {
                             try {
                                 downloaderRegistry.downloadAll(post, List.of(mediaUrl));
                             } catch (IOException e) {
+                                //TODO: handle exception with a logger
                                 throw new RuntimeException(e);
                             }
                         }).subscribeOn(Schedulers.boundedElastic());
