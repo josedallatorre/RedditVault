@@ -15,6 +15,7 @@ public class DownloaderRegistry {
             MediaDownloader downloader = this.downloader.stream()
                     .filter(d -> d.supports(post))
                     .findFirst()
+                    //TODO: handle exception with a logger
                     .orElseThrow(() -> new IllegalArgumentException("No downloader for url: " + url));
             downloader.download(url);
         }
