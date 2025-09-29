@@ -398,6 +398,7 @@ public class RedditClientService {
         MediaExtractorRegistry registry = new MediaExtractorRegistry();
         List<String> mediaUrls = registry.extract(post);
         DownloaderRegistry downloaderRegistry = new DownloaderRegistry();
+        //TODO: choose the filename then pass it to the downloader
         //TODO: check if posts has been already downloaded
         if (!mediaUrls.isEmpty()) {
             return Flux.fromIterable(mediaUrls)
