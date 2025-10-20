@@ -1,7 +1,6 @@
 package com.example.redditvault.redditPost;
 import jakarta.persistence.*;
 
-
 @Entity
 @Table
 public class RedditPost {
@@ -10,19 +9,19 @@ public class RedditPost {
     private String author;
     private String title;
     private String url;
-    private String subreddit;
+    private String subredditId;
     private String redditUsername;
 
     public RedditPost() {}
 
     public RedditPost(String id,String author,
                       String title, String url,
-                      String subreddit, String redditUsername) {
+                      String subredditId, String redditUsername) {
         this.id = id;
         this.author = author;
         this.title = title;
         this.url = url;
-        this.subreddit = subreddit;
+        this.subredditId = subredditId;
         this.redditUsername = redditUsername;
     }
 
@@ -58,10 +57,13 @@ public class RedditPost {
         this.url = url;
     }
 
-    public String getSubreddit() {
-        return subreddit;
+    public String getSubredditId() {
+        return subredditId;
     }
-    public void setSubreddit(String subreddit) {this.subreddit = subreddit;}
+
+    public void setSubredditId(String subredditId) {
+        this.subredditId = subredditId;
+    }
 
     public String getRedditUsername() {
         return redditUsername;
@@ -70,6 +72,7 @@ public class RedditPost {
     public void setRedditUsername(String redditUsername) {
         this.redditUsername = redditUsername;
     }
+
 
     @Override
     public String toString() {

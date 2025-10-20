@@ -1,6 +1,5 @@
 package com.example.redditvault.subreddit;
 
-import com.example.redditvault.redditPost.RedditPost;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +20,12 @@ public class SubredditService {
     }
 
     public void addNewSubreddit(Subreddit subreddit) {
+        /*
         Optional<Subreddit> subredditOptional =  subredditRepository.findSubredditByName(subreddit.getName());
         if (subredditOptional.isPresent()) {
             throw new IllegalStateException("Subreddit name already exists");
         }
+         */
         subredditRepository.save(subreddit);
         System.out.println(subreddit);
     }
