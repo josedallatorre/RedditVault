@@ -2,11 +2,12 @@ package com.example.redditvault.client;
 
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.redditPost.RedditPostRepository;
-import com.example.redditvault.redditPost.RedditPostService;
 import com.example.redditvault.subreddit.Subreddit;
-import com.example.redditvault.subreddit.SubredditRepository;
+import com.example.redditvault.subreddit.SubredditService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
@@ -19,7 +20,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 
+import java.awt.image.DataBuffer;
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -45,18 +48,20 @@ public class RedditClientService {
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
             .build();
     private final RedditTokenRepository redditTokenRepository;
-    private final SubredditRepository subredditRepository;
     private final RedditPostRepository redditPostRepository;
     private final JobStatusRepository jobStatusRepository;
+    private final SubredditService subredditService;
+    private static final Logger jsonLogger = LoggerFactory.getLogger("JSON_LOGGER");
+
 
     @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
-                               RedditTokenRepository redditTokenRepository, SubredditRepository subredditRepository,
+                               RedditTokenRepository redditTokenRepository, SubredditService subredditService,
                                RedditPostRepository redditPostRepository, JobStatusRepository jobStatusRepository) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
         this.redditTokenRepository = redditTokenRepository;
-        this.subredditRepository = subredditRepository;
+        this.subredditService = subredditService;
         this.redditPostRepository = redditPostRepository;
         this.jobStatusRepository = jobStatusRepository;
     }
@@ -185,10 +190,10 @@ public class RedditClientService {
         if (children != null) {
             for (RedditChildren redditChildren : children) {
                 RedditSavedItem item = redditChildren.getRedditSavedItem();
-                String subredditName = item.getSubreddit().getName();
+                String subredditId = item.getSubreddit().getSubredditId();
 
                 try {
-                    subredditRepository.save(new Subreddit(subredditName));
+                    subredditService.addNewSubreddit(new Subreddit(subredditId));
                 } catch (DataIntegrityViolationException ignored) {
                 }
 
@@ -201,7 +206,7 @@ public class RedditClientService {
                         item.getAuthor(),
                         item.getTitle(),
                         urlToSave,
-                        subredditName,
+                        subredditId,
                         username
                 );
 
@@ -214,109 +219,114 @@ public class RedditClientService {
     }
 
     public Flux<RedditPost> fetchAllUserSaved(User user) throws Exception {
-            String username = user.getUsername();
-            String accessToken = getAccessToken(username); // your existing method (blocking)
-            // If getAccessToken is blocking, wrap it:
-            // String accessToken = Mono.fromCallable(() -> getAccessToken(username))
-            //                          .subscribeOn(Schedulers.boundedElastic()).block();
+        String username = user.getUsername();
+        String accessToken = getAccessToken(username); // your existing method (blocking)
+        // If getAccessToken is blocking, wrap it:
+        // String accessToken = Mono.fromCallable(() -> getAccessToken(username))
+        //                          .subscribeOn(Schedulers.boundedElastic()).block();
 
-            return fetchPage(username, accessToken, null)
-                    .expand(resp -> {
-                        String after = resp.getData().getAfter();
-                        if (after == null) return Mono.empty();
-                        return fetchPage(username, accessToken, after);
-                    })
-                    .flatMap(resp -> {
-                        List<RedditChildren> children = resp.getData().getChildren();
-                        return Flux.fromIterable(children)
-                                .flatMap(rc -> {
-                                    RedditSavedItem item = rc.getRedditSavedItem();
-                                    String subredditName = item.getSubreddit().getName();
+        return fetchPage(username, accessToken, null)
+                .expand(resp -> {
+                    String after = resp.getData().getAfter();
+                    if (after == null) return Mono.empty();
+                    return fetchPage(username, accessToken, after);
+                })
+                .flatMap(resp -> {
+                    List<RedditChildren> children = resp.getData().getChildren();
+                    return Flux.fromIterable(children)
+                            .flatMap(rc -> {
+                                RedditSavedItem item = rc.getRedditSavedItem();
+                                String subredditId = item.getSubreddit().getSubredditId();
 
-                                    // Save subreddit (blocking JPA) safely
-                                    Mono<Void> saveSubreddit = Mono.fromRunnable(() -> {
-                                                try {
-                                                    subredditRepository.save(new Subreddit(subredditName));
-                                                } catch (DataIntegrityViolationException ignored) {}
-                                            })
-                                            .subscribeOn(Schedulers.boundedElastic())
-                                            .then();
+                                // Save subreddit (blocking JPA) safely
+                                Mono<Void> saveSubreddit = Mono.fromRunnable(() -> {
+                                            try {
+                                                subredditService.addNewSubreddit(new Subreddit(subredditId));
+                                            } catch (DataIntegrityViolationException ignored) {}
+                                        })
+                                        .subscribeOn(Schedulers.boundedElastic())
+                                        .then();
 
-                                    String urlToSave =
-                                            (item.getSecure_media() != null &&
-                                                    item.getSecure_media().getReddit_video() != null)
-                                                    ? item.getSecure_media().getReddit_video().getFallback_url()
-                                                    : item.getUrl();
+                                String urlToSave =
+                                        (item.getSecure_media() != null &&
+                                                item.getSecure_media().getReddit_video() != null)
+                                                ? item.getSecure_media().getReddit_video().getFallback_url()
+                                                : item.getUrl();
 
-                                    RedditPost post = new RedditPost(
-                                            item.getId(),
-                                            item.getAuthor(),
-                                            item.getTitle(),
-                                            urlToSave,
-                                            subredditName,
-                                            username
-                                    );
+                                RedditPost post = new RedditPost(
+                                        item.getId(),
+                                        item.getAuthor(),
+                                        item.getTitle(),
+                                        urlToSave,
+                                        subredditId,
+                                        username
+                                );
 
-                                    Mono<RedditPost> savePost =
-                                            Mono.fromCallable(() -> redditPostRepository.save(post))
-                                                    .subscribeOn(Schedulers.boundedElastic());
+                                Mono<RedditPost> savePost =
+                                        Mono.fromCallable(() -> redditPostRepository.save(post))
+                                                .subscribeOn(Schedulers.boundedElastic());
 
-                                    return saveSubreddit.then(savePost);
-                                });
-                    });
+                                // Scrape media after save
+                                Mono<Void> scrapePost = scrapeMediaFromPost(item);
+
+                                return saveSubreddit.then(savePost)
+                                        .flatMap(saved -> scrapePost.thenReturn(saved))
+                                        ;
+                            });
+                });
+    }
+
+    private Mono<RedditResponse> fetchPage(String username, String accessToken, String after) {
+        String base = "https://oauth.reddit.com/user/" + username + "/saved?limit=25";
+        String url = (after == null) ? base : base + "&after=" + after;
+
+        return webClient.get()
+                .uri(url)
+                .headers(h -> {
+                    h.setBearerAuth(accessToken);
+                    h.add("User-Agent", "Mozilla/5.0");
+                })
+                .retrieve()
+                .onStatus(status -> status.value() == 429,
+                        (ClientResponse resp) -> Mono.defer(() -> {
+                            // Try to respect Retry-After if Reddit provides it
+                            String ra = resp.headers().asHttpHeaders().getFirst("Retry-After");
+                            long delay = 2;
+                            try { if (ra != null) delay = Long.parseLong(ra); } catch (NumberFormatException ignored) {}
+                            return Mono.error(new RateLimitException("429 Too Many Requests, retrying in " + delay + "s", delay));
+                        })
+                )
+                .bodyToMono(String.class)
+                .map(json -> {
+                    try {
+                        return objectMapper.readValue(json, RedditResponse.class);
+                    } catch (Exception e) {
+                        throw new RuntimeException("Failed to parse Reddit response", e);
+                    }
+                })
+                .delayElement(Duration.ofSeconds(1)) // gentle pacing between hits
+                .retryWhen(
+                        Retry.max(3)
+                                .filter(ex -> ex instanceof RateLimitException)
+                                .transientErrors(true)
+                                .doBeforeRetry(rs -> {
+                                    if (rs.failure() instanceof RateLimitException rle) {
+                                        // delay per exception info
+                                        try { Thread.sleep(rle.delaySeconds() * 1000L); } catch (InterruptedException ignored) {}
+                                    }
+                                })
+                );
+    }
+
+    // Minimal custom exception to carry delay seconds
+    static class RateLimitException extends RuntimeException {
+        private final long delaySeconds;
+        RateLimitException(String msg, long delaySeconds) {
+            super(msg);
+            this.delaySeconds = delaySeconds;
         }
-
-        private Mono<RedditResponse> fetchPage(String username, String accessToken, String after) {
-            String base = "https://oauth.reddit.com/user/" + username + "/saved?limit=25";
-            String url = (after == null) ? base : base + "&after=" + after;
-
-            return webClient.get()
-                    .uri(url)
-                    .headers(h -> {
-                        h.setBearerAuth(accessToken);
-                        h.add("User-Agent", "Mozilla/5.0");
-                    })
-                    .retrieve()
-                    .onStatus(status -> status.value() == 429,
-                            (ClientResponse resp) -> Mono.defer(() -> {
-                                // Try to respect Retry-After if Reddit provides it
-                                String ra = resp.headers().asHttpHeaders().getFirst("Retry-After");
-                                long delay = 2;
-                                try { if (ra != null) delay = Long.parseLong(ra); } catch (NumberFormatException ignored) {}
-                                return Mono.error(new RateLimitException("429 Too Many Requests, retrying in " + delay + "s", delay));
-                            })
-                    )
-                    .bodyToMono(String.class)
-                    .map(json -> {
-                        try {
-                            return objectMapper.readValue(json, RedditResponse.class);
-                        } catch (Exception e) {
-                            throw new RuntimeException("Failed to parse Reddit response", e);
-                        }
-                    })
-                    .delayElement(Duration.ofSeconds(1)) // gentle pacing between hits
-                    .retryWhen(
-                            reactor.util.retry.Retry.max(3)
-                                    .filter(ex -> ex instanceof RateLimitException)
-                                    .transientErrors(true)
-                                    .doBeforeRetry(rs -> {
-                                        if (rs.failure() instanceof RateLimitException rle) {
-                                            // delay per exception info
-                                            try { Thread.sleep(rle.delaySeconds() * 1000L); } catch (InterruptedException ignored) {}
-                                        }
-                                    })
-                    );
-        }
-
-        // Minimal custom exception to carry delay seconds
-        static class RateLimitException extends RuntimeException {
-            private final long delaySeconds;
-            RateLimitException(String msg, long delaySeconds) {
-                super(msg);
-                this.delaySeconds = delaySeconds;
-            }
-            long delaySeconds() { return delaySeconds; }
-        }
+        long delaySeconds() { return delaySeconds; }
+    }
 
     @Async
     public void startFetchJob(String jobId, User user) throws Exception {
@@ -380,98 +390,37 @@ public class RedditClientService {
     }
 
 
-    public List<DownloadRequest> scrapeMediaFromPost(String accessToken, String redditPostUrl) {
-        List<DownloadRequest> mediaItems = new ArrayList<>();
-        String jsonUrl = redditPostUrl + ".json";
+    public Mono<Void> scrapeMediaFromPost(RedditSavedItem post) {
+        //TODO: add a flag in database if empty
+        if (post.getUrl() == null || post.getUrl().isEmpty()) return Mono.empty();
+        jsonLogger.info(post.getPermalink(),post.getUrl_overridden_by_dest(),post.getTitle());
 
-        String json = null;
-        int attempt = 0;
-        try {
-            json = webClient.get()
-                    .uri(jsonUrl)
-                    .header("Authorization", "Bearer " + accessToken)
-                    .header("User-Agent", "Mozilla/5.0")
-
-                    //.doOnSuccess(clientResponse -> System.out.println("clientResponse.statusCode() = " + clientResponse.statusCode()))
-                    .retrieve()
-                    .onStatus(
-                            status -> status.value() == 429,
-                            response -> {
-                                System.err.println("429 Too Many Requests: " + jsonUrl);
-                                System.err.println(response.headers().toString());
-                                // Retry after a delay
-                                return Mono.delay(Duration.ofSeconds(2)) // delay 2 seconds
-                                        .flatMap(aLong -> Mono.error(new RuntimeException("Rate limit reached, retrying...")));
+        MediaExtractorRegistry registry = new MediaExtractorRegistry();
+        List<String> mediaUrls = registry.extract(post);
+        DownloaderRegistry downloaderRegistry = new DownloaderRegistry();
+        //TODO: choose the filename then pass it to the downloader
+        //TODO: check if posts has been already downloaded
+        if (!mediaUrls.isEmpty()) {
+            return Flux.fromIterable(mediaUrls)
+                    .flatMap(mediaUrl -> {
+                        return Mono.fromRunnable(() -> {
+                            try {
+                                downloaderRegistry.downloadAll(post, List.of(mediaUrl));
+                            } catch (IOException e) {
+                                //TODO: handle exception with a logger
+                                throw new RuntimeException(e);
                             }
-                    )
-                    .bodyToMono(String.class)
-                    .delaySubscription(Duration.ofSeconds(1)) //Just add this before the repeat
-                    .block(); // blocking because scrape must finish before download
-
-        } catch (Exception e) {
-            System.err.println("Retrying after error: " + e.getMessage());
+                        }).subscribeOn(Schedulers.boundedElastic());
+                    })
+                    .then();
         }
-
-        // Process the retrieved JSON if the request was successful
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(json);
-
-            JsonNode postData = root.get(0).get("data").get("children").get(0).get("data");
-
-            String url = postData.get("url").asText();
-            boolean isVideo = postData.get("is_video").asBoolean();
-
-            if (isImage(url)) {
-                String filename = generateFilename(url);
-                mediaItems.add(new DownloadRequest(url, filename));
-            } else if (isVideo) {
-                JsonNode media = postData.get("media");
-                if (media != null && media.get("reddit_video") != null) {
-                    String videoUrl = media.get("reddit_video").get("fallback_url").asText();
-                    String filename = generateFilename(videoUrl);
-                    mediaItems.add(new DownloadRequest(videoUrl, filename));
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error parsing Reddit post JSON: " + e.getMessage());
-        }
-
-        return mediaItems;
+        return Mono.empty();
     }
 
 
+    // this is not utilized at the moment, but could be useful in the future
     private boolean isImage(String url) {
         return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
     }
 
-    private String generateFilename(String url) {
-        String extension = url.substring(url.lastIndexOf("."));
-        return UUID.randomUUID().toString() + extension;
-    }
-
-    public void download(String urlStr, String file) throws IOException {
-        URL url = new URL(urlStr);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("GET");
-
-        int responseCode = connection.getResponseCode();
-        if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-            throw new FileNotFoundException("404 Not Found: " + urlStr);
-        } else if (responseCode != HttpURLConnection.HTTP_OK) {
-            throw new IOException("Failed to download: HTTP " + responseCode + " for " + urlStr);
-        }
-
-        try (BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
-             FileOutputStream fis = new FileOutputStream(file)) {
-
-            byte[] buffer = new byte[1024];
-            int count;
-            while ((count = bis.read(buffer)) != -1) {
-                fis.write(buffer, 0, count);
-            }
-        } finally {
-            connection.disconnect();
-        }
-    }
 }

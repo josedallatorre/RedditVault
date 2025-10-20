@@ -1,6 +1,7 @@
 package com.example.redditvault.client;
 
 import com.example.redditvault.redditPost.RedditPost;
+import com.example.redditvault.utils.DownloadUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -106,6 +107,23 @@ public class RedditController {
         return ResponseEntity.ok(Map.of("jobId", jobId));
     }
 
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+    @PostMapping("/all-media")
+    public ResponseEntity<Map<String, String>> fetchAllUserSavedMedia(@RequestBody User user) throws Exception {
+        String jobId = UUID.randomUUID().toString();
+
+        JobStatus job = new JobStatus();
+        job.setJobId(jobId);
+        job.setUsername(user.getUsername());
+        job.setStatus("PENDING");
+        jobStatusRepository.save(job);
+
+        // async call
+        redditClientService.startFetchJob(jobId, user);
+
+        return ResponseEntity.ok(Map.of("jobId", jobId));
+    }
+
     @GetMapping("/status/{jobId}")
     public ResponseEntity<JobStatus> getStatus(@PathVariable String jobId) {
         return jobStatusRepository.findById(jobId)
@@ -137,7 +155,7 @@ public class RedditController {
                 requests.stream()
                         .map(request -> CompletableFuture.runAsync(() -> {
                             try {
-                                redditClientService.download(request.getUrl(), request.getFilename());
+                                DownloadUtils.download(request.getUrl(), request.getFilename());
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
@@ -146,6 +164,7 @@ public class RedditController {
         ).join();
     }
 
+    /*
     @PostMapping("/scrape")
     public String scrapeAndDownload(@RequestHeader("Authorization") String bearerToken,@RequestBody List<Post> posts) throws FileNotFoundException {
         List<DownloadRequest> allMediaItems = new ArrayList<>();
@@ -171,4 +190,5 @@ public class RedditController {
 
         return "Scraped and downloaded " + allMediaItems.size() + " items.";
     }
+     */
 }
