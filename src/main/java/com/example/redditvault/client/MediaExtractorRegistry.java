@@ -4,6 +4,7 @@ import java.util.List;
 
 public class MediaExtractorRegistry {
     private final List<MediaExtractor> extractors = List.of(
+        //TODO: add media extarnal to Reddit (e.g., Imgur, Gfycat, etc.)
             new VideoExtractor(),
             new GalleryExtractor(),
             new SingleImageExtractor()
