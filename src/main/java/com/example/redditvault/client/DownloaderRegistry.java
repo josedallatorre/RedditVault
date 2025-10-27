@@ -5,6 +5,7 @@ import java.util.List;
 
 public class DownloaderRegistry {
     private final List<MediaDownloader> downloader = List.of(
+        //TODO: add media extarnal to Reddit (e.g., Imgur, Gfycat, etc.)
             new ImageDownloader(),
             new VideoDownloader(),
             new GalleryDownloader()
