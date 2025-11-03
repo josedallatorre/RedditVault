@@ -68,6 +68,20 @@ public class RedditController {
 
      }
 
+     @PostMapping
+     public ResponseEntity<String> refreshRedditToken(@RequestBody String refreshToken){
+        if(refreshToken == null || refreshToken.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid reddit token");
+        }
+         try {
+             String userJson = redditClientService.refreshRedditToken(refreshToken);
+             return ResponseEntity.ok(userJson);
+         } catch (Exception e) {
+             e.printStackTrace();
+             return ResponseEntity.internalServerError().build();
+         }
+     }
+
     @GetMapping("/info")
     public Map<String, Object> userInfo(OAuth2AuthenticationToken authentication) {
         // Return the user's attributes as a map
