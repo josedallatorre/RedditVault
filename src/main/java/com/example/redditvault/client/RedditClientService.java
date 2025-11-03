@@ -120,6 +120,55 @@ public class RedditClientService {
         }
     }
 
+    public String refreshRedditToken(String refreshToken) {
+        try {
+            String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
+            String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+
+            String formData = "grant_type=refresh_token" +
+                    "&refresh_token" + refreshToken;
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI(RedditProperties.OAUTH_TOKEN_URL))
+                    .header("Authorization", "Basic " + encoded)
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(formData))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Failed to get token: " + response.body());
+            }
+
+            // Parse response JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(response.body());
+
+            String accessToken = jsonNode.get("access_token").asText();
+            String newRefreshToken = jsonNode.has("refresh_token") ? jsonNode.get("refresh_token").asText() : null;
+            int expiresIn = jsonNode.get("expires_in").asInt();
+
+            // Optional: fetch username with access token
+            String redditUsername = fetchUsername(accessToken);
+
+            //TODO: modify logic, token should be unique for user, rn is causing error in DB
+            //TODO: create a logic to refresh token if the user is still sending requests
+            // Store to DB
+            RedditToken token = new RedditToken();
+            token.setAccessToken(accessToken);
+            token.setRefreshToken(newRefreshToken);
+            token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
+            token.setRedditUsername(redditUsername);
+            token.setRedditVaultToken("redditVaultToken");
+            redditTokenRepository.save(token);
+
+            return redditUsername;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Failed to exchange code for token: " + e.getMessage();
+        }
+    }
+
     public String fetchUsername(String accessToken) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://oauth.reddit.com/api/v1/me"))
