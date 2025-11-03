@@ -68,13 +68,13 @@ public class RedditController {
 
      }
 
-     @PostMapping
-     public ResponseEntity<String> refreshRedditToken(@RequestBody String refreshToken){
-        if(refreshToken == null || refreshToken.isEmpty()){
+     @PostMapping(path = "/refresh-token")
+     public ResponseEntity<String> refreshRedditToken(@RequestBody User user){
+        if(user.getUsername() == null || user.getUsername().isEmpty()){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid reddit token");
         }
          try {
-             String userJson = redditClientService.refreshRedditToken(refreshToken);
+             String userJson = redditClientService.refreshRedditToken(user);
              return ResponseEntity.ok(userJson);
          } catch (Exception e) {
              e.printStackTrace();
