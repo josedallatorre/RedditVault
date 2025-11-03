@@ -120,13 +120,14 @@ public class RedditClientService {
         }
     }
 
-    public String refreshRedditToken(String refreshToken) {
+    public String refreshRedditToken(User user) {
+        String refreshToken = getRefreshToken(user.getUsername());
         try {
             String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
             String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 
             String formData = "grant_type=refresh_token" +
-                    "&refresh_token" + refreshToken;
+                    "&refresh_token=" + refreshToken;
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(RedditProperties.OAUTH_TOKEN_URL))
@@ -185,6 +186,12 @@ public class RedditClientService {
     public String getAccessToken(String redditUsername) {
         return redditTokenRepository.findByRedditUsername(redditUsername)
                 .map(RedditToken::getAccessToken)
+                .orElseThrow(() -> new RuntimeException("User not authorized"));
+    }
+
+    public String getRefreshToken(String redditUsername) {
+        return redditTokenRepository.findByRedditUsername(redditUsername)
+                .map(RedditToken::getRefreshToken)
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
     }
 
