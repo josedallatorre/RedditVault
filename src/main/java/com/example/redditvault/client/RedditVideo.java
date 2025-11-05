@@ -1,6 +1,7 @@
 package com.example.redditvault.client;
 
 public class RedditVideo {
+    //TODO: add field for audio URL
     private String fallback_url;
 
     public String getFallback_url() {
