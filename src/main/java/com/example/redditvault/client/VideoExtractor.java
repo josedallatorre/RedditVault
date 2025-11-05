@@ -10,6 +10,7 @@ public class VideoExtractor implements MediaExtractor {
 
     @Override
     public List<String> extractMediaUrls(RedditSavedItem post) {
+        //TODO: check for audio
         List<String> urls = new ArrayList<>();
         RedditMedia media = post.getSecure_media();
         if (media != null && media.getReddit_video() != null) {
