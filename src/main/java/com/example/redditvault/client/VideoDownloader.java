@@ -12,6 +12,7 @@ public class VideoDownloader implements MediaDownloader{
     @Override
     public void download(String url) throws IOException{
         // TODO: download audio if present
+        // For now, just download the video
         String filename = DownloadUtils.generateFilename(url);
         DownloadUtils.download(url, filename);
     }
