@@ -195,9 +195,16 @@ public class RedditClientService {
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
     }
 
-    public String getUserInfo(String username) {
-        String accessToken = getAccessToken(username);
-        System.out.println("Access token for " + username + ": " + accessToken);
+    private String getAccessTokenfromJWT(String redditVaultToken) {
+        RedditToken token = redditTokenRepository.findByRedditVaultToken(redditVaultToken)
+                .orElseThrow(() -> new RuntimeException("User not authorized"));
+
+        return token.getAccessToken();
+    }
+
+    public String getUserInfo(String jwt) {
+        String accessToken = getAccessTokenfromJWT(jwt);
+        System.out.println("Access token for " + jwt + ": " + accessToken);
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(RedditProperties.ME_URL))
