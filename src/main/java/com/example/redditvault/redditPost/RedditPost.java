@@ -1,4 +1,5 @@
 package com.example.redditvault.redditPost;
+import com.example.redditvault.subreddit.Subreddit;
 import jakarta.persistence.*;
 
 @Entity
@@ -9,19 +10,20 @@ public class RedditPost {
     private String author;
     private String title;
     private String url;
-    private String subredditId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Subreddit subreddit;
     private String redditUsername;
 
     public RedditPost() {}
 
     public RedditPost(String id,String author,
                       String title, String url,
-                      String subredditId, String redditUsername) {
+                      Subreddit subreddit, String redditUsername) {
         this.id = id;
         this.author = author;
         this.title = title;
         this.url = url;
-        this.subredditId = subredditId;
+        this.subreddit = subreddit;
         this.redditUsername = redditUsername;
     }
 
@@ -57,12 +59,12 @@ public class RedditPost {
         this.url = url;
     }
 
-    public String getSubredditId() {
-        return subredditId;
+    public Subreddit getSubredditId() {
+        return subreddit;
     }
 
-    public void setSubredditId(String subredditId) {
-        this.subredditId = subredditId;
+    public void setSubredditId(Subreddit subredditId) {
+        this.subreddit = subredditId;
     }
 
     public String getRedditUsername() {
