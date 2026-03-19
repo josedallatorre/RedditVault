@@ -1,5 +1,6 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.JwtService;
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.utils.DownloadUtils;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,11 +29,14 @@ import java.util.concurrent.CompletableFuture;
 public class RedditController {
     private final RedditClientService redditClientService;
     private final JobStatusRepository jobStatusRepository;
+    private final JwtService jwtService;
 
     @Autowired
-    public RedditController(RedditClientService redditClientService, JobStatusRepository jobStatusRepository) {
+    public RedditController(RedditClientService redditClientService, JobStatusRepository jobStatusRepository,
+                            JwtService jwtService) {
         this.redditClientService = redditClientService;
         this.jobStatusRepository = jobStatusRepository;
+        this.jwtService = jwtService;
     }
 
      @GetMapping(path = "/auth")
@@ -98,6 +102,7 @@ public class RedditController {
         }
         String jwt = authHeader.substring(7);
         System.out.println(jwt);
+        String userEmail = jwtService.extractUsername(jwt);
         try {
             String userJson = redditClientService.getUserInfo(jwt);
             return ResponseEntity.ok(userJson);
