@@ -1,10 +1,10 @@
 package com.example.redditvault.subreddit;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.example.redditvault.redditPost.RedditPost;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -13,15 +13,15 @@ import lombok.Setter;
 public class Subreddit {
     @Id
     private String subredditId;
-
     private String name;
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "subreddits")
+    private Set<RedditPost> redditPost;
 
     public Subreddit() {
     }
     public Subreddit(String subredditId) {
         this.subredditId = subredditId;
     }
-
     public void setSubredditId(String subredditId) {
         this.subredditId = subredditId;
     }
