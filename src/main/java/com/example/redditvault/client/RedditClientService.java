@@ -246,10 +246,10 @@ public class RedditClientService {
         if (children != null) {
             for (RedditChildren redditChildren : children) {
                 RedditSavedItem item = redditChildren.getRedditSavedItem();
-                String subredditId = item.getSubreddit().getSubredditId();
-
+                String subRedditId = item.getSubreddit().getSubredditId();
+                Subreddit subReddit = new Subreddit(subRedditId);
                 try {
-                    subredditService.addNewSubreddit(new Subreddit(subredditId));
+                    subredditService.addNewSubreddit(subReddit);
                 } catch (DataIntegrityViolationException ignored) {
                 }
 
@@ -262,7 +262,7 @@ public class RedditClientService {
                         item.getAuthor(),
                         item.getTitle(),
                         urlToSave,
-                        subredditId,
+                        subReddit,
                         username
                 );
 
@@ -293,11 +293,12 @@ public class RedditClientService {
                             .flatMap(rc -> {
                                 RedditSavedItem item = rc.getRedditSavedItem();
                                 String subredditId = item.getSubreddit().getSubredditId();
+                                Subreddit subReddit = new Subreddit(subredditId);
 
                                 // Save subreddit (blocking JPA) safely
                                 Mono<Void> saveSubreddit = Mono.fromRunnable(() -> {
                                             try {
-                                                subredditService.addNewSubreddit(new Subreddit(subredditId));
+                                                subredditService.addNewSubreddit(subReddit);
                                             } catch (DataIntegrityViolationException ignored) {}
                                         })
                                         .subscribeOn(Schedulers.boundedElastic())
@@ -314,7 +315,7 @@ public class RedditClientService {
                                         item.getAuthor(),
                                         item.getTitle(),
                                         urlToSave,
-                                        subredditId,
+                                        subReddit,
                                         username
                                 );
 
