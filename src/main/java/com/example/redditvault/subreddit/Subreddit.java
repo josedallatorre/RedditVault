@@ -14,7 +14,7 @@ public class Subreddit {
     @Id
     private String subredditId;
     private String name;
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "subreddits")
+    @OneToMany(fetch = FetchType.LAZY)
     private Set<RedditPost> redditPost;
 
     public Subreddit() {
