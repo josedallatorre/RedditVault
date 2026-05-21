@@ -128,7 +128,7 @@ public class RedditClientService {
             token.setAccessToken(accessToken);
             token.setRefreshToken(refreshToken);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
-            token.setRedditVaultToken("redditVaultToken");
+            token.setRedditUsername(redditUsername);
             token.setRedditAccount(redditAccount);
             redditTokenRepository.save(token);
 
@@ -180,7 +180,7 @@ public class RedditClientService {
             token.setAccessToken(accessToken);
             token.setRefreshToken(newRefreshToken);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
-            token.setRedditVaultToken("redditVaultToken");
+            token.setRedditUsername(redditUsername);
             redditTokenRepository.save(token);
 
             return redditUsername;
@@ -215,20 +215,20 @@ public class RedditClientService {
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
     }
 
-    private String getAccessTokenfromJWT(String jwt) {
+    private String getAccessTokenfromJWT(String jwt, String redditUsername) {
+        // TODO: control that redditUsername is in list of redditAccount of the User
         final String userEmail = jwtService.extractUsername(jwt);
         UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
         String username = userDetails.getUsername();
         System.out.println(username);
         System.out.println(userDetails);
-        RedditToken token = redditTokenRepository.findByRedditVaultToken("redditVaultToken")
+        RedditToken token = redditTokenRepository.findByRedditUsername(redditUsername)
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
-
         return token.getAccessToken();
     }
 
-    public String getUserInfo(String jwt) {
-        String accessToken = getAccessTokenfromJWT(jwt);
+    public String getUserInfo(String jwt, String username) {
+        String accessToken = getAccessTokenfromJWT(jwt, username);
         System.out.println("Access token for " + jwt + ": " + accessToken);
         try {
             HttpRequest request = HttpRequest.newBuilder()
