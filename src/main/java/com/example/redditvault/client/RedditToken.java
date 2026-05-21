@@ -13,9 +13,6 @@ public class RedditToken {
 
     private String redditUsername;
 
-    @Column(length = 2048)
-    private String redditVaultToken;
-
     //@Convert(converter = AESConverter.class)
     @Column(length = 2048)
     private String accessToken;
@@ -71,13 +68,6 @@ public class RedditToken {
         this.expiresAt = expiresAt;
     }
 
-    public String getRedditVaultToken() {
-        return redditVaultToken;
-    }
-
-    public void setRedditVaultToken(String redditVaultToken) {
-        this.redditVaultToken = redditVaultToken;
-    }
 
     public RedditAccount getRedditAccount() {
         return redditAccount;

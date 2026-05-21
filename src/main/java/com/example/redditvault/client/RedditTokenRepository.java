@@ -8,6 +8,5 @@ import java.util.Optional;
 @Repository
 public interface RedditTokenRepository extends JpaRepository<RedditToken, Long> {
     Optional<RedditToken> findByRedditUsername(String redditUsername);
-    Optional<RedditToken> findByRedditVaultToken(String redditVaultToken);
 }
 
