@@ -1,5 +1,9 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.JwtService;
+import com.example.redditvault.redditAccount.RedditAccount;
+import com.example.redditvault.redditAccount.RedditAccountRepository;
+import com.example.redditvault.redditAccount.RedditAccountService;
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.redditPost.RedditPostRepository;
 import com.example.redditvault.subreddit.Subreddit;
@@ -14,6 +18,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -44,19 +51,29 @@ public class RedditClientService {
     private final RedditPostRepository redditPostRepository;
     private final JobStatusRepository jobStatusRepository;
     private final SubredditService subredditService;
+    private final RedditAccountService redditAccountService;
+    private final RedditAccountRepository redditAccountRepository;
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
     private static final Logger jsonLogger = LoggerFactory.getLogger("JSON_LOGGER");
 
 
     @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
                                RedditTokenRepository redditTokenRepository, SubredditService subredditService,
-                               RedditPostRepository redditPostRepository, JobStatusRepository jobStatusRepository) {
+                               RedditPostRepository redditPostRepository, JobStatusRepository jobStatusRepository,
+                               RedditAccountService redditAccountService, RedditAccountRepository redditAccountRepository,
+                               JwtService jwtService, UserDetailsService userDetailsService) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
         this.redditTokenRepository = redditTokenRepository;
         this.subredditService = subredditService;
         this.redditPostRepository = redditPostRepository;
         this.jobStatusRepository = jobStatusRepository;
+        this.redditAccountService = redditAccountService;
+        this.redditAccountRepository = redditAccountRepository;
+        this.jwtService = jwtService;
+        this.userDetailsService = userDetailsService;
     }
 
     public ResponseEntity<String> getAuthUrl() {
@@ -106,11 +123,13 @@ public class RedditClientService {
             //TODO: create a logic to refresh token if the user is still sending requests
             // Store to DB
             RedditToken token = new RedditToken();
+            RedditAccount redditAccount = new RedditAccount(redditUsername);
+            redditAccountService.addNewRedditAccount(redditAccount);
             token.setAccessToken(accessToken);
             token.setRefreshToken(refreshToken);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
-            token.setRedditUsername(redditUsername);
             token.setRedditVaultToken("redditVaultToken");
+            token.setRedditAccount(redditAccount);
             redditTokenRepository.save(token);
 
             return redditUsername;
@@ -151,6 +170,8 @@ public class RedditClientService {
 
             // Optional: fetch username with access token
             String redditUsername = fetchUsername(accessToken);
+            RedditAccount redditAccount = new RedditAccount(redditUsername);
+            redditAccountService.addNewRedditAccount(redditAccount);
 
             //TODO: modify logic, token should be unique for user, rn is causing error in DB
             //TODO: create a logic to refresh token if the user is still sending requests
@@ -159,7 +180,6 @@ public class RedditClientService {
             token.setAccessToken(accessToken);
             token.setRefreshToken(newRefreshToken);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
-            token.setRedditUsername(redditUsername);
             token.setRedditVaultToken("redditVaultToken");
             redditTokenRepository.save(token);
 
@@ -195,8 +215,13 @@ public class RedditClientService {
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
     }
 
-    private String getAccessTokenfromJWT(String redditVaultToken) {
-        RedditToken token = redditTokenRepository.findByRedditVaultToken(redditVaultToken)
+    private String getAccessTokenfromJWT(String jwt) {
+        final String userEmail = jwtService.extractUsername(jwt);
+        UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+        String username = userDetails.getUsername();
+        System.out.println(username);
+        System.out.println(userDetails);
+        RedditToken token = redditTokenRepository.findByRedditVaultToken("redditVaultToken")
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
 
         return token.getAccessToken();
