@@ -1,5 +1,6 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.redditAccount.RedditAccount;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -24,6 +25,8 @@ public class RedditToken {
 
     private Instant expiresAt;
 
+    @ManyToOne()
+    private RedditAccount redditAccount;
 
     public RedditToken() {
     }
@@ -74,6 +77,14 @@ public class RedditToken {
 
     public void setRedditVaultToken(String redditVaultToken) {
         this.redditVaultToken = redditVaultToken;
+    }
+
+    public RedditAccount getRedditAccount() {
+        return redditAccount;
+    }
+
+    public void setRedditAccount(RedditAccount redditAccount) {
+        this.redditAccount = redditAccount;
     }
 }
 
