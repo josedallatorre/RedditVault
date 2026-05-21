@@ -94,7 +94,7 @@ public class RedditController {
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @GetMapping("/me")
-    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String authHeader, @RequestParam String redditUsername) {
         // TODO: extract email from jwt then pass it to service to get Reddit username and than
         // we can get other infos
         if(authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -104,7 +104,7 @@ public class RedditController {
         System.out.println(jwt);
         String userEmail = jwtService.extractUsername(jwt);
         try {
-            String userJson = redditClientService.getUserInfo(jwt);
+            String userJson = redditClientService.getUserInfo(jwt, redditUsername);
             return ResponseEntity.ok(userJson);
         } catch (Exception e) {
             e.printStackTrace();
