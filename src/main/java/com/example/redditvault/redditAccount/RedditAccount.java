@@ -22,8 +22,9 @@ public class RedditAccount {
     public RedditAccount() {
 
     }
-    public RedditAccount(String redditUsername) {
+    public RedditAccount(String redditUsername, UserTest userTest) {
         this.redditUsername = redditUsername;
+        this.userTest = userTest;
     }
 
     public Long getId() {
@@ -40,6 +41,14 @@ public class RedditAccount {
 
     public void setRedditUsername(String redditUsername) {
         this.redditUsername = redditUsername;
+    }
+
+    public UserTest getUserTest() {
+        return userTest;
+    }
+
+    public void setUserTest(UserTest userTest) {
+        this.userTest = userTest;
     }
 
     public Set<RedditToken> getTokens() {
