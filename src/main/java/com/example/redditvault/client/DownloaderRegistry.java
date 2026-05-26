@@ -1,5 +1,7 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.client.dto.RedditSavedItem;
+
 import java.io.IOException;
 import java.util.List;
 

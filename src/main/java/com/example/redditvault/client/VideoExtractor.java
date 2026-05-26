@@ -1,4 +1,7 @@
 package com.example.redditvault.client;
+import com.example.redditvault.client.dto.RedditMedia;
+import com.example.redditvault.client.dto.RedditSavedItem;
+
 import java.util.ArrayList;
 import java.util.List;
 
