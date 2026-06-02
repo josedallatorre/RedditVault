@@ -25,8 +25,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (request.getServletPath().startsWith("/api/v1/auth") || request.getServletPath().startsWith("/api/v1/redditclient/auth") ||
-        request.getServletPath().startsWith("/api/v1/redditclient/oauth/callback")
+        if (request.getServletPath().equals("/api/v1/auth") || request.getServletPath().equals("/api/v1/redditclient/auth") ||
+        request.getServletPath().equals("/api/v1/redditclient/oauth/callback")
         ) {
             filterChain.doFilter(request, response);
             return;
