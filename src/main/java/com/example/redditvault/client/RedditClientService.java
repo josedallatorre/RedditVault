@@ -1,6 +1,7 @@
 package com.example.redditvault.client;
 
 import com.example.redditvault.JwtService;
+import com.example.redditvault.client.dto.*;
 import com.example.redditvault.redditAccount.RedditAccount;
 import com.example.redditvault.redditAccount.RedditAccountRepository;
 import com.example.redditvault.redditAccount.RedditAccountService;
@@ -8,6 +9,8 @@ import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.redditPost.RedditPostRepository;
 import com.example.redditvault.subreddit.Subreddit;
 import com.example.redditvault.subreddit.SubredditService;
+import com.example.redditvault.web.UserTest;
+import com.example.redditvault.web.UserTestRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -18,7 +21,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -55,7 +57,9 @@ public class RedditClientService {
     private final RedditAccountRepository redditAccountRepository;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final RedditStateCodeRepository redditStateCodeRepository;
     private static final Logger jsonLogger = LoggerFactory.getLogger("JSON_LOGGER");
+    private final UserTestRepository userTestRepository;
 
 
     @Autowired
@@ -63,7 +67,8 @@ public class RedditClientService {
                                RedditTokenRepository redditTokenRepository, SubredditService subredditService,
                                RedditPostRepository redditPostRepository, JobStatusRepository jobStatusRepository,
                                RedditAccountService redditAccountService, RedditAccountRepository redditAccountRepository,
-                               JwtService jwtService, UserDetailsService userDetailsService) {
+                               JwtService jwtService, UserDetailsService userDetailsService,
+                               RedditStateCodeRepository redditStateCodeRepository, UserTestRepository userTestRepository) {
         this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
         this.redditTokenRepository = redditTokenRepository;
@@ -74,11 +79,20 @@ public class RedditClientService {
         this.redditAccountRepository = redditAccountRepository;
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.redditStateCodeRepository = redditStateCodeRepository;
+        this.userTestRepository = userTestRepository;
     }
 
-    public ResponseEntity<String> getAuthUrl() {
+    public ResponseEntity<String> getAuthUrl(String jwt) {
         //TODO: generate a random state and then check if a request of auth is valid
-        String state = "prova";
+        String state = UUID.randomUUID().toString();
+        final String userEmail = jwtService.extractUsername(jwt);
+        UserTest user = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
+        String username = user.getUsername();
+        System.out.println(username);
+        System.out.println(user);
+        RedditStateCode redditStateCode = new RedditStateCode(state, user.getId());
+        redditStateCodeRepository.save(redditStateCode);
         String url = String.format(
                 redditProperties.getUserAuthUrl(state)
         );
@@ -118,12 +132,13 @@ public class RedditClientService {
 
             // Optional: fetch username with access token
             String redditUsername = fetchUsername(accessToken);
-
-            //TODO: modify logic, token should be unique for user, rn is causing error in DB
-            //TODO: create a logic to refresh token if the user is still sending requests
-            // Store to DB
+            Integer userId = redditStateCodeRepository.findById(state)
+                    .map(RedditStateCode::getUserId)
+                    .orElseThrow(() -> new RuntimeException("Invalid state"));
+            UserTest user = userTestRepository.findById(userId)
+                    .orElseThrow(()->new RuntimeException("Invalid User"));
             RedditToken token = new RedditToken();
-            RedditAccount redditAccount = new RedditAccount(redditUsername);
+            RedditAccount redditAccount = new RedditAccount(redditUsername, user);
             redditAccountService.addNewRedditAccount(redditAccount);
             token.setAccessToken(accessToken);
             token.setRefreshToken(refreshToken);
@@ -134,12 +149,11 @@ public class RedditClientService {
 
             return redditUsername;
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Failed to exchange code for token: " + e.getMessage();
+            throw new RuntimeException("OAuth exchange failed", e);
         }
     }
 
-    public String refreshRedditToken(User user) {
+    public String refreshRedditToken(User user, String jwt) {
         String refreshToken = getRefreshToken(user.getUsername());
         try {
             String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
@@ -168,9 +182,16 @@ public class RedditClientService {
             String newRefreshToken = jsonNode.has("refresh_token") ? jsonNode.get("refresh_token").asText() : null;
             int expiresIn = jsonNode.get("expires_in").asInt();
 
+
+            final String userEmail = jwtService.extractUsername(jwt);
+            UserTest userTest = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
+            String username = user.getUsername();
+            System.out.println(username);
+            System.out.println(user);
+
             // Optional: fetch username with access token
             String redditUsername = fetchUsername(accessToken);
-            RedditAccount redditAccount = new RedditAccount(redditUsername);
+            RedditAccount redditAccount = new RedditAccount(redditUsername, userTest);
             redditAccountService.addNewRedditAccount(redditAccount);
 
             //TODO: modify logic, token should be unique for user, rn is causing error in DB
