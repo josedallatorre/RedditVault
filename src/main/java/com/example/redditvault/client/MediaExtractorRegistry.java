@@ -1,10 +1,12 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.client.dto.RedditSavedItem;
+
 import java.util.List;
 
 public class MediaExtractorRegistry {
     private final List<MediaExtractor> extractors = List.of(
-        //TODO: add media extarnal to Reddit (e.g., Imgur, Gfycat, etc.)
+        //TODO: add media external to Reddit (e.g., Imgur, Gfycat, etc.)
             new VideoExtractor(),
             new GalleryExtractor(),
             new SingleImageExtractor()

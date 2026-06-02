@@ -40,7 +40,7 @@ function SavedPost() {
       setLoadingMore(true);
     }    setError(null);
     try {
-      const res = await fetch("http://localhost:8080/api/v1/redditclient/saved", {
+      const res = await fetch("http://localhost:8080/api/v1/redditclient/saved"+redditUsername, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

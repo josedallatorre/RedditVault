@@ -1,5 +1,6 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.client.dto.RedditSavedItem;
 import com.example.redditvault.utils.DownloadUtils;
 
 import java.io.IOException;
@@ -12,6 +13,7 @@ public class VideoDownloader implements MediaDownloader{
     @Override
     public void download(String url) throws IOException{
         // TODO: download audio if present
+        // For now, just download the video
         String filename = DownloadUtils.generateFilename(url);
         DownloadUtils.download(url, filename);
     }

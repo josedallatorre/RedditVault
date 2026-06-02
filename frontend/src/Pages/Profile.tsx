@@ -16,7 +16,7 @@ function Profile() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/v1/redditclient/me", {
+    fetch("http://localhost:8080/api/v1/redditclient/me?redditUsername="+redditUsername, {
       credentials: "include",
       method: "GET",
       headers: {

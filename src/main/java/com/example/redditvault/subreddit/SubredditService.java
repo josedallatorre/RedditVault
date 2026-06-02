@@ -27,7 +27,6 @@ public class SubredditService {
         }
          */
         subredditRepository.save(subreddit);
-        System.out.println(subreddit);
     }
 
 }

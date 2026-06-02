@@ -1,5 +1,8 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.client.dto.MediaMetadata;
+import com.example.redditvault.client.dto.RedditSavedItem;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
