@@ -138,13 +138,18 @@ public class RedditClientService {
             UserTest user = userTestRepository.findById(userId)
                     .orElseThrow(()->new RuntimeException("Invalid User"));
             RedditToken token = new RedditToken();
-            RedditAccount redditAccount = new RedditAccount(redditUsername, user);
-            redditAccountService.addNewRedditAccount(redditAccount);
+            Optional<RedditAccount> optionalRedditAccount = redditAccountRepository.findByRedditUsername(redditUsername);
+            if (!optionalRedditAccount.isPresent()){
+                RedditAccount redditAccount = new RedditAccount(redditUsername, user);
+                redditAccountService.addNewRedditAccount(redditAccount);
+                token.setRedditAccount(redditAccount);
+            }else {
+                token.setRedditAccount(optionalRedditAccount.get());
+            }
             token.setAccessToken(accessToken);
             token.setRefreshToken(refreshToken);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
             token.setRedditUsername(redditUsername);
-            token.setRedditAccount(redditAccount);
             redditTokenRepository.save(token);
 
             return redditUsername;
@@ -191,17 +196,19 @@ public class RedditClientService {
 
             // Optional: fetch username with access token
             String redditUsername = fetchUsername(accessToken);
-            RedditAccount redditAccount = new RedditAccount(redditUsername, userTest);
-            redditAccountService.addNewRedditAccount(redditAccount);
+            Optional<RedditAccount> redditAccount = redditAccountRepository.findByRedditUsername(redditUsername);
 
             //TODO: modify logic, token should be unique for user, rn is causing error in DB
             //TODO: create a logic to refresh token if the user is still sending requests
             // Store to DB
+            Optional<RedditToken> oldToken = redditTokenRepository.findByRedditUsername(redditUsername);
+            oldToken.ifPresent(redditToken -> redditTokenRepository.deleteById(redditToken.getId()));
             RedditToken token = new RedditToken();
             token.setAccessToken(accessToken);
             token.setRefreshToken(newRefreshToken);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
             token.setRedditUsername(redditUsername);
+            redditAccount.ifPresent(token::setRedditAccount);
             redditTokenRepository.save(token);
 
             return redditUsername;
