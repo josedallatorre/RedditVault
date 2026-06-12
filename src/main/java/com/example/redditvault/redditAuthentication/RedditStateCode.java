@@ -1,4 +1,4 @@
-package com.example.redditvault.client;
+package com.example.redditvault.redditAuthentication;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
