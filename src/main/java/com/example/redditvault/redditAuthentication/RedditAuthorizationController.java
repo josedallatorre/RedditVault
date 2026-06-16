@@ -69,7 +69,7 @@ public class RedditAuthorizationController {
         }
         String jwt = authHeader.substring(7);
         if(user.getUsername() == null || user.getUsername().isEmpty()){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid reddit token");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User can't be null");
         }
         try {
             String userJson = redditAuthorizationService.refreshRedditToken(user, jwt);

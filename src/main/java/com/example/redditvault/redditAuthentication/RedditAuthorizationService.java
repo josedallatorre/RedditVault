@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
@@ -59,9 +58,6 @@ public class RedditAuthorizationService {
         String state = UUID.randomUUID().toString();
         final String userEmail = jwtService.extractUsername(jwt);
         UserTest user = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
-        String username = user.getUsername();
-        System.out.println(username);TODO:
-        System.out.println(user);
         RedditStateCode redditStateCode = new RedditStateCode(state, user.getId());
         redditStateCodeRepository.save(redditStateCode);
         String url = String.format(
@@ -159,19 +155,14 @@ public class RedditAuthorizationService {
             int expiresIn = jsonNode.get("expires_in").asInt();
 
 
-            final String userEmail = jwtService.extractUsername(jwt);
-            UserTest userTest = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
-            String username = user.getUsername();
-            System.out.println(username);
-            System.out.println(user);
+            // final String userEmail = jwtService.extractUsername(jwt);
+            //UserTest userTest = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
+            //String username = user.getUsername();
 
             // Optional: fetch username with access token
             String redditUsername = fetchUsername(accessToken);
             Optional<RedditAccount> redditAccount = redditAccountRepository.findByRedditUsername(redditUsername);
 
-            //TODO: modify logic, token should be unique for user, rn is causing error in DB
-            //TODO: create a logic to refresh token if the user is still sending requests
-            // Store to DB
             Optional<RedditToken> oldToken = redditTokenRepository.findByRedditUsername(redditUsername);
             oldToken.ifPresent(redditToken -> redditTokenRepository.deleteById(redditToken.getId()));
             RedditToken token = new RedditToken();
