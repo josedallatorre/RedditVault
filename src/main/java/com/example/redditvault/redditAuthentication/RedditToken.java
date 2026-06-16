@@ -1,5 +1,6 @@
-package com.example.redditvault.client;
+package com.example.redditvault.redditAuthentication;
 
+import com.example.redditvault.redditAccount.RedditAccount;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -12,9 +13,6 @@ public class RedditToken {
 
     private String redditUsername;
 
-    @Column(length = 2048)
-    private String redditVaultToken;
-
     //@Convert(converter = AESConverter.class)
     @Column(length = 2048)
     private String accessToken;
@@ -24,6 +22,8 @@ public class RedditToken {
 
     private Instant expiresAt;
 
+    @ManyToOne()
+    private RedditAccount redditAccount;
 
     public RedditToken() {
     }
@@ -68,12 +68,13 @@ public class RedditToken {
         this.expiresAt = expiresAt;
     }
 
-    public String getRedditVaultToken() {
-        return redditVaultToken;
+
+    public RedditAccount getRedditAccount() {
+        return redditAccount;
     }
 
-    public void setRedditVaultToken(String redditVaultToken) {
-        this.redditVaultToken = redditVaultToken;
+    public void setRedditAccount(RedditAccount redditAccount) {
+        this.redditAccount = redditAccount;
     }
 }
 

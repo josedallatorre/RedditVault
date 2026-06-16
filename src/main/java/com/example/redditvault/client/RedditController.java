@@ -1,20 +1,22 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.JwtService;
+import com.example.redditvault.client.dto.DownloadRequest;
+import com.example.redditvault.client.dto.SavedPageResponse;
+import com.example.redditvault.client.dto.SavedRequest;
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.utils.DownloadUtils;
+import com.example.redditvault.web.UserTest;
+import com.example.redditvault.web.UserTestRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.async.WebAsyncTask;
-import reactor.core.publisher.Flux;
 
-import java.awt.print.Pageable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -28,45 +30,17 @@ import java.util.concurrent.CompletableFuture;
 public class RedditController {
     private final RedditClientService redditClientService;
     private final JobStatusRepository jobStatusRepository;
+    private final UserTestRepository userTestRepository;
+
 
     @Autowired
-    public RedditController(RedditClientService redditClientService, JobStatusRepository jobStatusRepository) {
+    public RedditController(RedditClientService redditClientService, JobStatusRepository jobStatusRepository,
+                            UserTestRepository userTestRepository) {
         this.redditClientService = redditClientService;
         this.jobStatusRepository = jobStatusRepository;
+        this.userTestRepository = userTestRepository;
     }
 
-     @GetMapping(path = "/auth")
-    public ResponseEntity<String> getAuth() {
-         return redditClientService.getAuthUrl();
-     }
-
-     @GetMapping(path = "/oauth/callback")
-    public ResponseEntity<Void>  oauthCallback(@RequestParam("code") String code, @RequestParam("state") String state,
-                                               HttpServletResponse response) {
-         String redditUsername;
-
-         try {
-             redditUsername =redditClientService.exchangeCodeForToken(code, state); // returns username
-         } catch (Exception e) {
-             // In case of error, redirect with an error message
-             URI errorRedirect = URI.create("http://localhost:5173/?error=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
-             return ResponseEntity.status(HttpStatus.FOUND).location(errorRedirect).build();
-         }
-         ResponseCookie cookie = ResponseCookie.from("authToken", redditUsername)
-                 .httpOnly(true)
-                 .secure(false) // set to true if using HTTPS
-                 .sameSite("Lax")
-                 .path("/")
-                 .maxAge(Duration.ofHours(1))
-                 .build();
-
-         response.addHeader("Set-Cookie", cookie.toString());
-
-         // Redirect with the username
-         URI redirectUri = URI.create("http://localhost:5173/?username=" + URLEncoder.encode(redditUsername, StandardCharsets.UTF_8));
-         return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
-
-     }
 
     @GetMapping("/info")
     public Map<String, Object> userInfo(OAuth2AuthenticationToken authentication) {
@@ -76,13 +50,15 @@ public class RedditController {
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @GetMapping("/me")
-    public ResponseEntity<String> getUserInfo(@CookieValue(name = "authToken", required = false) String authToken) {
-        System.out.println(authToken);
-        if (authToken == null) {
+    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String authHeader, @RequestParam String redditUsername) {
+        // TODO: extract email from jwt then pass it to service to get Reddit username and than
+        // we can get other infos
+        if(authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing auth token");
         }
+        String jwt = authHeader.substring(7);
         try {
-            String userJson = redditClientService.getUserInfo(authToken);
+            String userJson = redditClientService.getUserInfo(jwt, redditUsername);
             return ResponseEntity.ok(userJson);
         } catch (Exception e) {
             e.printStackTrace();

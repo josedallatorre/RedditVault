@@ -86,8 +86,8 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/redditclient/oauth/callback",
-                                "/api/v1/redditclient/auth")
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/reddit/oauth/callback",
+                                "/api/v1/reddit/auth")
                         .permitAll()
                         .anyRequest()
                         .authenticated())

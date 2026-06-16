@@ -1,5 +1,7 @@
 package com.example.redditvault.web;
 
+import com.example.redditvault.redditAccount.RedditAccount;
+import com.example.redditvault.redditPost.RedditPost;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -28,6 +31,8 @@ public class UserTest implements UserDetails {
     private String password;
     @Enumerated(EnumType.STRING)
     private Role role;
+    @OneToMany(fetch = FetchType.LAZY)
+    private Set<RedditAccount> redditAccounts;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -66,5 +71,13 @@ public class UserTest implements UserDetails {
     public boolean isEnabled() {
         //return UserDetails.super.isEnabled();
         return true;
+    }
+
+    public Set<RedditAccount> getRedditAccounts() {
+        return redditAccounts;
+    }
+
+    public void setRedditAccounts(Set<RedditAccount> redditAccounts) {
+        this.redditAccounts = redditAccounts;
     }
 }

@@ -1,10 +1,13 @@
 package com.example.redditvault.client;
 
+import com.example.redditvault.client.dto.RedditSavedItem;
+
 import java.io.IOException;
 import java.util.List;
 
 public class DownloaderRegistry {
     private final List<MediaDownloader> downloader = List.of(
+        //TODO: add media external to Reddit (e.g., Imgur, Gfycat, etc.)
             new ImageDownloader(),
             new VideoDownloader(),
             new GalleryDownloader()

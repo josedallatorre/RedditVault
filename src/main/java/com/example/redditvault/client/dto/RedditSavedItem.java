@@ -1,4 +1,4 @@
-package com.example.redditvault.client;
+package com.example.redditvault.client.dto;
 import com.example.redditvault.subreddit.Subreddit;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;

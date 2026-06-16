@@ -1,4 +1,4 @@
-package com.example.redditvault.client;
+package com.example.redditvault.client.dto;
 
 import com.example.redditvault.redditPost.RedditPost;
 
