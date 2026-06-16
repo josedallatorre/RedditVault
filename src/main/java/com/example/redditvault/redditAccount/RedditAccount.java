@@ -1,7 +1,6 @@
 package com.example.redditvault.redditAccount;
 
-import com.example.redditvault.client.RedditToken;
-import com.example.redditvault.client.User;
+import com.example.redditvault.redditAuthentication.RedditToken;
 import com.example.redditvault.web.UserTest;
 import jakarta.persistence.*;
 

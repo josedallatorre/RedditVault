@@ -2,24 +2,21 @@ package com.example.redditvault.client;
 
 import com.example.redditvault.JwtService;
 import com.example.redditvault.client.dto.*;
-import com.example.redditvault.redditAccount.RedditAccount;
 import com.example.redditvault.redditAccount.RedditAccountRepository;
 import com.example.redditvault.redditAccount.RedditAccountService;
+import com.example.redditvault.redditAuthentication.RedditStateCodeRepository;
+import com.example.redditvault.redditAuthentication.RedditToken;
+import com.example.redditvault.redditAuthentication.RedditTokenRepository;
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.redditPost.RedditPostRepository;
 import com.example.redditvault.subreddit.Subreddit;
 import com.example.redditvault.subreddit.SubredditService;
-import com.example.redditvault.web.UserTest;
 import com.example.redditvault.web.UserTestRepository;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -35,15 +32,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class RedditClientService {
-    private final RedditProperties redditProperties;
     private final HttpClient client = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper;
     private final WebClient webClient = WebClient.builder()
@@ -53,14 +47,9 @@ public class RedditClientService {
     private final RedditPostRepository redditPostRepository;
     private final JobStatusRepository jobStatusRepository;
     private final SubredditService subredditService;
-    private final RedditAccountService redditAccountService;
-    private final RedditAccountRepository redditAccountRepository;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final RedditStateCodeRepository redditStateCodeRepository;
     private static final Logger jsonLogger = LoggerFactory.getLogger("JSON_LOGGER");
-    private final UserTestRepository userTestRepository;
-
 
     @Autowired
     public RedditClientService(RedditProperties redditProperties, ObjectMapper objectMapper,
@@ -69,159 +58,13 @@ public class RedditClientService {
                                RedditAccountService redditAccountService, RedditAccountRepository redditAccountRepository,
                                JwtService jwtService, UserDetailsService userDetailsService,
                                RedditStateCodeRepository redditStateCodeRepository, UserTestRepository userTestRepository) {
-        this.redditProperties = redditProperties;
         this.objectMapper = objectMapper;
         this.redditTokenRepository = redditTokenRepository;
         this.subredditService = subredditService;
         this.redditPostRepository = redditPostRepository;
         this.jobStatusRepository = jobStatusRepository;
-        this.redditAccountService = redditAccountService;
-        this.redditAccountRepository = redditAccountRepository;
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
-        this.redditStateCodeRepository = redditStateCodeRepository;
-        this.userTestRepository = userTestRepository;
-    }
-
-    public ResponseEntity<String> getAuthUrl(String jwt) {
-        //TODO: generate a random state and then check if a request of auth is valid
-        String state = UUID.randomUUID().toString();
-        final String userEmail = jwtService.extractUsername(jwt);
-        UserTest user = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
-        String username = user.getUsername();
-        System.out.println(username);
-        System.out.println(user);
-        RedditStateCode redditStateCode = new RedditStateCode(state, user.getId());
-        redditStateCodeRepository.save(redditStateCode);
-        String url = String.format(
-                redditProperties.getUserAuthUrl(state)
-        );
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create(url));
-        return new ResponseEntity<>(headers, HttpStatus.FOUND);
-    }
-
-    public String exchangeCodeForToken(String code, String state) {
-        try {
-            String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
-            String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-
-            String formData = "grant_type=authorization_code" +
-                    "&code=" + code +
-                    "&redirect_uri=" + redditProperties.getRedirectUri();
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(RedditProperties.OAUTH_TOKEN_URL))
-                    .header("Authorization", "Basic " + encoded)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(formData))
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                throw new RuntimeException("Failed to get token: " + response.body());
-            }
-
-            // Parse response JSON
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode jsonNode = objectMapper.readTree(response.body());
-
-            String accessToken = jsonNode.get("access_token").asText();
-            String refreshToken = jsonNode.has("refresh_token") ? jsonNode.get("refresh_token").asText() : null;
-            int expiresIn = jsonNode.get("expires_in").asInt();
-
-            // Optional: fetch username with access token
-            String redditUsername = fetchUsername(accessToken);
-            Integer userId = redditStateCodeRepository.findById(state)
-                    .map(RedditStateCode::getUserId)
-                    .orElseThrow(() -> new RuntimeException("Invalid state"));
-            UserTest user = userTestRepository.findById(userId)
-                    .orElseThrow(()->new RuntimeException("Invalid User"));
-            RedditToken token = new RedditToken();
-            RedditAccount redditAccount = new RedditAccount(redditUsername, user);
-            redditAccountService.addNewRedditAccount(redditAccount);
-            token.setAccessToken(accessToken);
-            token.setRefreshToken(refreshToken);
-            token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
-            token.setRedditUsername(redditUsername);
-            token.setRedditAccount(redditAccount);
-            redditTokenRepository.save(token);
-
-            return redditUsername;
-        } catch (Exception e) {
-            throw new RuntimeException("OAuth exchange failed", e);
-        }
-    }
-
-    public String refreshRedditToken(User user, String jwt) {
-        String refreshToken = getRefreshToken(user.getUsername());
-        try {
-            String credentials = redditProperties.getClientId() + ":" + redditProperties.getClientSecret();
-            String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-
-            String formData = "grant_type=refresh_token" +
-                    "&refresh_token=" + refreshToken;
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(RedditProperties.OAUTH_TOKEN_URL))
-                    .header("Authorization", "Basic " + encoded)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(formData))
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                throw new RuntimeException("Failed to get token: " + response.body());
-            }
-
-            // Parse response JSON
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode jsonNode = objectMapper.readTree(response.body());
-
-            String accessToken = jsonNode.get("access_token").asText();
-            String newRefreshToken = jsonNode.has("refresh_token") ? jsonNode.get("refresh_token").asText() : null;
-            int expiresIn = jsonNode.get("expires_in").asInt();
-
-
-            final String userEmail = jwtService.extractUsername(jwt);
-            UserTest userTest = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
-            String username = user.getUsername();
-            System.out.println(username);
-            System.out.println(user);
-
-            // Optional: fetch username with access token
-            String redditUsername = fetchUsername(accessToken);
-            RedditAccount redditAccount = new RedditAccount(redditUsername, userTest);
-            redditAccountService.addNewRedditAccount(redditAccount);
-
-            //TODO: modify logic, token should be unique for user, rn is causing error in DB
-            //TODO: create a logic to refresh token if the user is still sending requests
-            // Store to DB
-            RedditToken token = new RedditToken();
-            token.setAccessToken(accessToken);
-            token.setRefreshToken(newRefreshToken);
-            token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
-            token.setRedditUsername(redditUsername);
-            redditTokenRepository.save(token);
-
-            return redditUsername;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Failed to exchange code for token: " + e.getMessage();
-        }
-    }
-
-    public String fetchUsername(String accessToken) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://oauth.reddit.com/api/v1/me"))
-                .header("Authorization", "bearer " + accessToken)
-                .header("User-Agent", "myapp/0.0.1")
-                .GET()
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        JsonNode jsonNode = new ObjectMapper().readTree(response.body());
-        return jsonNode.get("name").asText(); // "name" is the Reddit username
     }
 
     public String getAccessToken(String redditUsername) {
@@ -230,11 +73,7 @@ public class RedditClientService {
                 .orElseThrow(() -> new RuntimeException("User not authorized"));
     }
 
-    public String getRefreshToken(String redditUsername) {
-        return redditTokenRepository.findByRedditUsername(redditUsername)
-                .map(RedditToken::getRefreshToken)
-                .orElseThrow(() -> new RuntimeException("User not authorized"));
-    }
+
 
     private String getAccessTokenfromJWT(String jwt, String redditUsername) {
         // TODO: control that redditUsername is in list of redditAccount of the User

@@ -1,4 +1,4 @@
-package com.example.redditvault.client;
+package com.example.redditvault.redditAuthentication;
 
 import com.example.redditvault.redditAccount.RedditAccount;
 import jakarta.persistence.*;
