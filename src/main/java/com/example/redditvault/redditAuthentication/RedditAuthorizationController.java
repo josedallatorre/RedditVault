@@ -11,6 +11,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 
 @RestController
 @RequestMapping(path = "api/v1/reddit")
@@ -23,10 +24,11 @@ public class RedditAuthorizationController {
         this.redditAuthorizationService = redditAuthorizationService;
     }
 
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @GetMapping(path = "/auth")
-    public ResponseEntity<String> getAuth(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Map<String, String>> getAuth(@RequestHeader("Authorization") String authHeader) {
         if(authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing auth token");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error","Missing auth token"));
         }
         String jwt = authHeader.substring(7);
         return redditAuthorizationService.getAuthUrl(jwt);
