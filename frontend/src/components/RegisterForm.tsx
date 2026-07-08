@@ -1,6 +1,6 @@
 // src/components/RegisterForm.tsx
 import { useState } from "react";
-import Register  from '../api/auth';
+import Register  from '../api/register.tsx';
 
 export default function RegisterForm() {
   const [form, setForm] = useState({
