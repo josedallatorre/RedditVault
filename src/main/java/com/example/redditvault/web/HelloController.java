@@ -19,6 +19,7 @@ public class HelloController {
         return ResponseEntity.ok(authenticationService.register(request));
     }
 
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/authenticate")
     public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
         return ResponseEntity.ok(authenticationService.authenticate(request));
