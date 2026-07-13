@@ -57,5 +57,6 @@ public class DataInitializer implements CommandLineRunner{
         // 2. Then create dependent entities
         RedditPost post = new RedditPost("1","test33",  "title1", "url1", subreddit, "test33");
         redditPostRepository.save(post);
+        user.addRedditAccount(account);
     }
 }
