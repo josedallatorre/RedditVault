@@ -103,12 +103,18 @@ public class RedditAuthorizationService {
                     .orElseThrow(() -> new RuntimeException("Invalid state"));
             UserTest user = userTestRepository.findById(userId)
                     .orElseThrow(()->new RuntimeException("Invalid User"));
+            Optional<RedditToken> oldToken = redditTokenRepository.findByRedditUsername(redditUsername);
+            while(oldToken.isPresent()) {
+                oldToken.ifPresent(redditToken -> redditTokenRepository.deleteById(redditToken.getId()));
+                oldToken = redditTokenRepository.findByRedditUsername(redditUsername);
+            }
             RedditToken token = new RedditToken();
             Optional<RedditAccount> optionalRedditAccount = redditAccountRepository.findByRedditUsername(redditUsername);
             if (!optionalRedditAccount.isPresent()){
                 RedditAccount redditAccount = new RedditAccount(redditUsername, user);
                 redditAccountService.addNewRedditAccount(redditAccount);
                 token.setRedditAccount(redditAccount);
+                user.addRedditAccount(redditAccount);
             }else {
                 token.setRedditAccount(optionalRedditAccount.get());
             }
