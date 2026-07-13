@@ -1,12 +1,15 @@
 // src/components/AuthenticateForm.tsx
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import Authenticate  from '../api/authenticate.tsx';
+import {useNavigate} from "react-router-dom";
 
 export default function AuthenticateForm() {
     const [form, setForm] = useState({
         email: "",
         password: "",
     });
+    const [formData, setFormData] = useState('');
+    const navigate = useNavigate();
 
     const [message, setMessage] = useState("");
 
@@ -19,11 +22,18 @@ export default function AuthenticateForm() {
         try {
             const token = await Authenticate(form);
             localStorage.setItem("token", token);
+            setFormData('Form Submitted');
             setMessage("Authenticated successfully!");
         } catch (err) {
             setMessage("Authentication failed.");
         }
     };
+
+    useEffect(() => {
+        if (formData) {
+            navigate('/profile');
+        }
+    }, [formData, navigate]);
 
     return (
         <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4 border rounded space-y-4">
