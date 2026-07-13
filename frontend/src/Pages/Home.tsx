@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import RegisterForm from "../components/RegisterForm";
 import AuthenticateForm from "../components/AuthenticateForm"
-import { Link } from "react-router-dom";
 
 
 
@@ -56,20 +55,7 @@ function Home() {
             }
             </div>
 
-            <div className="flex flex-row justify-center p-3">
 
-                {username ? (
-                    <p>Welcome, {username}!</p>
-                ) : (
-                    <Link
-                        to="/connect-reddit"
-                        className="bg-orange-600 text-white rounded-md px-7 py-3 text-lg font-semibold transition-colors duration-300 hover:bg-orange-700 inline-block"
-                        aria-label="Get started with Reddit Vault"
-                    >
-                        Connect Reddit
-                    </Link>
-                )}
-            </div>
 
             <section aria-label="Features" className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
                 <div className="bg-white rounded-lg shadow p-5">
