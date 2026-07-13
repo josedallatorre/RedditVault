@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,15 +32,17 @@ import java.util.concurrent.CompletableFuture;
 public class RedditController {
     private final RedditClientService redditClientService;
     private final JobStatusRepository jobStatusRepository;
-    private final UserTestRepository userTestRepository;
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
 
     @Autowired
     public RedditController(RedditClientService redditClientService, JobStatusRepository jobStatusRepository,
-                            UserTestRepository userTestRepository) {
+                            JwtService jwtService, UserDetailsService userDetailsService) {
         this.redditClientService = redditClientService;
         this.jobStatusRepository = jobStatusRepository;
-        this.userTestRepository = userTestRepository;
+        this.jwtService = jwtService;
+        this.userDetailsService = userDetailsService;
     }
 
 
@@ -49,8 +53,8 @@ public class RedditController {
     }
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
-    @GetMapping("/me")
-    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String authHeader, @RequestParam String redditUsername) {
+    @GetMapping("/me/{redditUsername}")
+    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String authHeader, @PathVariable String redditUsername) {
         // TODO: extract email from jwt then pass it to service to get Reddit username and than
         // we can get other infos
         if(authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -64,6 +68,19 @@ public class RedditController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
+    }
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+    @GetMapping("/me")
+    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String authHeader) {
+        // TODO: extract email from jwt then pass it to service to get Reddit username and than
+        // we can get other infos
+        if(authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing auth token");
+        }
+        String jwt = authHeader.substring(7);
+        final String userEmail = jwtService.extractUsername(jwt);
+        UserTest user = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
+        return ResponseEntity.ok(user.getRedditAccounts().toString());
     }
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
