@@ -63,14 +63,12 @@ public class RedditController {
     }
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @GetMapping("/me")
-    public ResponseEntity<List<User>> getUserInfo(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authHeader) {
         // TODO: extract email from jwt then pass it to service to get Reddit username and than
         // we can get other infos
-        /*
         if(authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing auth token");
         }
-         */
         String jwt = authHeader.substring(7);
         final String userEmail = jwtService.extractUsername(jwt);
         UserTest user = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
