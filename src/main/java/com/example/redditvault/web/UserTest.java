@@ -12,6 +12,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -31,8 +32,9 @@ public class UserTest implements UserDetails {
     private String password;
     @Enumerated(EnumType.STRING)
     private Role role;
-    @OneToMany(fetch = FetchType.LAZY)
-    private Set<RedditAccount> redditAccounts;
+    @OneToMany(mappedBy = "userTest", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<RedditAccount> redditAccounts = new HashSet<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -79,5 +81,14 @@ public class UserTest implements UserDetails {
 
     public void setRedditAccounts(Set<RedditAccount> redditAccounts) {
         this.redditAccounts = redditAccounts;
+    }
+    public void addRedditAccount(RedditAccount account) {
+        redditAccounts.add(account);
+        account.setUserTest(this);
+    }
+
+    public void removeRedditAccount(RedditAccount account) {
+        redditAccounts.remove(account);
+        account.setUserTest(null);
     }
 }

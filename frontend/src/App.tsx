@@ -5,6 +5,8 @@ import SavedPost from './Pages/SavedPost';
 import Layout from './components/Layout';
 import Vite from './Pages/ViteIndex';
 import Subreddit from './Pages/Subreddit';
+import ConnectReddit from "./Pages/ConnectReddit.tsx";
+
 
 
 function App() {
@@ -17,6 +19,7 @@ function App() {
         <Route path="/saved" element={< SavedPost />} />
         <Route path="/subreddit" element={< Subreddit />} />
         <Route path="/vite" element={ <Vite /> } />
+        <Route path="/connect-reddit" element={<ConnectReddit />} />
       </Route>
     </Routes>
   )

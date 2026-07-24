@@ -21,4 +21,5 @@ export async function Register(data: {
   const result = await response.json();
   return result.token; // JWT
 }
+
 export default Register;

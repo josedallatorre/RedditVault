@@ -10,8 +10,6 @@ import com.example.redditvault.web.UserTest;
 import com.example.redditvault.web.UserTestRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -24,6 +22,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,7 +52,7 @@ public class RedditAuthorizationService {
         this.userTestRepository = userTestRepository;
     }
 
-    public ResponseEntity<String> getAuthUrl(String jwt) {
+    public ResponseEntity<Map<String, String>> getAuthUrl(String jwt) {
         //TODO: generate a random state and then check if a request of auth is valid
         String state = UUID.randomUUID().toString();
         final String userEmail = jwtService.extractUsername(jwt);
@@ -63,9 +62,9 @@ public class RedditAuthorizationService {
         String url = String.format(
                 redditProperties.getUserAuthUrl(state)
         );
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create(url));
-        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        return ResponseEntity.ok(
+                Map.of("url", url)
+        );
     }
 
     public String exchangeCodeForToken(String code, String state) {
@@ -104,12 +103,18 @@ public class RedditAuthorizationService {
                     .orElseThrow(() -> new RuntimeException("Invalid state"));
             UserTest user = userTestRepository.findById(userId)
                     .orElseThrow(()->new RuntimeException("Invalid User"));
+            Optional<RedditToken> oldToken = redditTokenRepository.findByRedditUsername(redditUsername);
+            while(oldToken.isPresent()) {
+                oldToken.ifPresent(redditToken -> redditTokenRepository.deleteById(redditToken.getId()));
+                oldToken = redditTokenRepository.findByRedditUsername(redditUsername);
+            }
             RedditToken token = new RedditToken();
             Optional<RedditAccount> optionalRedditAccount = redditAccountRepository.findByRedditUsername(redditUsername);
             if (!optionalRedditAccount.isPresent()){
                 RedditAccount redditAccount = new RedditAccount(redditUsername, user);
                 redditAccountService.addNewRedditAccount(redditAccount);
                 token.setRedditAccount(redditAccount);
+                user.addRedditAccount(redditAccount);
             }else {
                 token.setRedditAccount(optionalRedditAccount.get());
             }
