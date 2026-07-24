@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import RegisterForm from "../components/RegisterForm";
+import AuthenticateForm from "../components/AuthenticateForm"
+
 
 
 function Home() {
     const [username, setUsername] = useState<string | null>(null);
+    const [token, setToken] = useState<string | null>(null);
     useEffect(() => {
         if (!sessionStorage.getItem("visited")) {
             localStorage.clear(); // first visit in this tab/window
@@ -12,6 +15,7 @@ function Home() {
         const params = new URLSearchParams(window.location.search);
         const usernameFromQuery = params.get("username");
         const redditUsername = localStorage.getItem("redditUsername");
+        const token = localStorage.getItem("token");
         const error = params.get("error");
 
         if(redditUsername){
@@ -20,6 +24,9 @@ function Home() {
         else if (usernameFromQuery) {
             localStorage.setItem("redditUsername", usernameFromQuery);
             setUsername(usernameFromQuery);
+        }
+        if(token){
+            setToken(token)
         }
 
         if (error) {
@@ -35,23 +42,20 @@ function Home() {
                     Securely archive and access all your saved Reddit posts and comments in one easy-to-use vault.
                 </p>
             </header>
-                  <RegisterForm />
             <div className="flex flex-row justify-center p-3">
-
-                {username ? (
-                    <p>Welcome, {username}!</p>
-                ) : (
-                    <a
-                        href="http://localhost:8080/api/v1/redditclient/auth"
-                        //target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-orange-600 text-white rounded-md px-7 py-3 text-lg font-semibold transition-colors duration-300 hover:bg-orange-700 inline-block"
-                        aria-label="Get started with Reddit Vault"
-                    >
-                        Get Started
-                    </a>
-                )}
+            {
+                token ? (
+                    <p>The user is logged in</p>
+                ):(
+                    <div className="flex flex-row justify-center p-3">
+                        <RegisterForm/>
+                        <AuthenticateForm/>
+                    </div>
+                )
+            }
             </div>
+
+
 
             <section aria-label="Features" className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
                 <div className="bg-white rounded-lg shadow p-5">
