@@ -4,26 +4,18 @@ import com.example.redditvault.JwtService;
 import com.example.redditvault.client.dto.DownloadRequest;
 import com.example.redditvault.client.dto.SavedPageResponse;
 import com.example.redditvault.client.dto.SavedRequest;
+import com.example.redditvault.redditAccount.RedditAccount;
 import com.example.redditvault.redditPost.RedditPost;
 import com.example.redditvault.utils.DownloadUtils;
 import com.example.redditvault.web.UserTest;
-import com.example.redditvault.web.UserTestRepository;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -71,16 +63,24 @@ public class RedditController {
     }
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @GetMapping("/me")
-    public ResponseEntity<String> getUserInfo(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<List<User>> getUserInfo(@RequestHeader("Authorization") String authHeader) {
         // TODO: extract email from jwt then pass it to service to get Reddit username and than
         // we can get other infos
+        /*
         if(authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing auth token");
         }
+         */
         String jwt = authHeader.substring(7);
         final String userEmail = jwtService.extractUsername(jwt);
         UserTest user = (UserTest) this.userDetailsService.loadUserByUsername(userEmail);
-        return ResponseEntity.ok(user.getRedditAccounts().toString());
+        List<User> redditUsers = new ArrayList<User>();
+        Set<RedditAccount> userRedditAccounts = user.getRedditAccounts();
+        for(RedditAccount account: userRedditAccounts){
+            User redditUser = new User(account.getRedditUsername(), account.getId());
+            redditUsers.add(redditUser);
+        }
+        return ResponseEntity.ok(redditUsers);
     }
 
     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
