@@ -3,12 +3,16 @@ import {Navigate} from "react-router-dom";
 import { Link } from "react-router-dom";
 
 type RedditUser = {
-  name: string;
-  id: string;
+  username: string;
+  id: number;
   icon_img?: string;
   created?: number;
   link_karma?: number;
   comment_karma?: number;
+};
+type RedditAccount = {
+  username: string;
+  id: number;
 };
 
 function Profile() {
@@ -19,8 +23,8 @@ function Profile() {
   const token = localStorage.getItem("token");
   const [user, setUser] = useState<RedditUser | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [other, setOther] = useState<string | null>(null);
-
+  const [other, setOther] = useState<RedditAccount[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     /*
@@ -55,8 +59,10 @@ function Profile() {
         return response.json();
       })
       .then((json) => setUser(json))
-      .catch((err) => setError(err.message));
-  }else{
+      .catch((err) => setError(err.message))
+        .finally(() => setLoading(false));
+
+    }else{
       fetch("http://localhost:8080/api/v1/redditclient/me", {
         credentials: "include",
         method: "GET",
@@ -70,10 +76,11 @@ function Profile() {
               const text = await response.text();
               throw new Error(`HTTP ${response.status}: ${text}`);
             }
-            return response.text();
+            return response.json();
           })
-          .then((text) => setOther(text))
+          .then((json) => setOther(json))
           .catch((err) => setError(err.message))
+          .finally(() => setLoading(false));
     }}, []);
 
   return (
@@ -85,37 +92,28 @@ function Profile() {
           <div className="text-red-600 font-semibold mb-4">❌ {error}</div>
         )}
 
-        {!user && !error && (
+        {loading && (
           <div className="text-lg text-gray-700 mb-4">Loading...</div>
         )}
         <div>
 
         {
         redditUsername ? (
-                    <p>Welcome, {redditUsername}!</p>
+                    <p >Welcome, {redditUsername}!</p>
                 ) : (
                     <p>No username</p>)}
         </div>
-        <div className="flex flex-row justify-center p-3">
 
-          {username ? (
-              <p>Welcome, {username}!</p>
+        <div className="flex flex-col justify-center p-3">
+          {other.length > 0 ? (
+              other.map((account) => (
+                  <div key={account.id}>
+                    <p>Username: {account.username}</p>
+                    <p>ID: {account.id}</p>
+                  </div>
+              ))
           ) : (
-              <Link
-                  to="/connect-reddit"
-                  className="bg-orange-600 text-white rounded-md px-7 py-3 text-lg font-semibold transition-colors duration-300 hover:bg-orange-700 inline-block"
-                  aria-label="Get started with Reddit Vault"
-              >
-                Connect Reddit
-              </Link>
-          )}
-        </div>
-        <div className="flex flex-row justify-center p-3">
-
-          {other ? (
-              <p>Other: {other}!</p>
-          ) : (
-              <p>No other</p>
+              <p>No Reddit accounts</p>
           )}
         </div>
 
@@ -129,7 +127,7 @@ function Profile() {
                 alt="avatar"
               />
             )}
-            <h2 className="text-2xl font-semibold mb-2">{user.name}</h2>
+            <h2 className="text-2xl font-semibold mb-2">{user.username}</h2>
             <p className="mb-1">
               <strong>ID:</strong> {user.id}
             </p>
@@ -147,6 +145,20 @@ function Profile() {
             </p>
           </div>
         )}
+        <div className="flex flex-row justify-center p-3">
+
+          {username ? (
+              <p>Welcome, {username}!</p>
+          ) : (
+              <Link
+                  to="/connect-reddit"
+                  className="bg-orange-600 text-white rounded-md px-7 py-3 text-lg font-semibold transition-colors duration-300 hover:bg-orange-700 inline-block"
+                  aria-label="Get started with Reddit Vault"
+              >
+                Connect Reddit
+              </Link>
+          )}
+        </div>
       </header>
     </div>
   );
