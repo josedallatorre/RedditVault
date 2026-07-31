@@ -209,11 +209,18 @@ public class RedditClientService {
                                                 .subscribeOn(Schedulers.boundedElastic());
 
                                 // Scrape media after save
-                                Mono<Void> scrapePost = scrapeMediaFromPost(item);
+                                Mono<Void> scrapePost = scrapeMediaFromPost(item)
+                                        .onErrorResume(e -> {
+                                            jsonLogger.info("Scrape failed for post " + item.getId() + ": " + e);
+                                            return Mono.empty();
+                                        });
 
                                 return saveSubreddit.then(savePost)
                                         .flatMap(saved -> scrapePost.thenReturn(saved))
-                                        ;
+                                        .onErrorResume(e -> {
+                                            jsonLogger.info("Failed to process post " + item.getId() + ": " + e);
+                                            return Mono.empty();
+                                        });
                             });
                 });
     }
@@ -226,7 +233,7 @@ public class RedditClientService {
                 .uri(url)
                 .headers(h -> {
                     h.setBearerAuth(accessToken);
-                    h.add("User-Agent", "Mozilla/5.0");
+                    h.add("User-Agent", "linux:test:v1.0 (by /u/33prova33)");
                 })
                 .retrieve()
                 .onStatus(status -> status.value() == 429,
@@ -243,6 +250,7 @@ public class RedditClientService {
                     try {
                         return objectMapper.readValue(json, RedditResponse.class);
                     } catch (Exception e) {
+                        jsonLogger.info(String.valueOf(e));
                         throw new RuntimeException("Failed to parse Reddit response", e);
                     }
                 })
@@ -364,5 +372,4 @@ public class RedditClientService {
     private boolean isImage(String url) {
         return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
     }
-
 }
