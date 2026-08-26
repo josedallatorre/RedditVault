@@ -87,7 +87,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/reddit/oauth/callback",
-                                "/api/v1/reddit/auth")
+                                "/api/v1/reddit/auth", "/error")
                         .permitAll()
                         .anyRequest()
                         .authenticated())
