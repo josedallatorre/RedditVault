@@ -1,10 +1,10 @@
 logging:
+  file.name: logs/app.log
   level:
     root: INFO
     org.springframework.web: INFO
     org.springframework.security: DEBUG
   #    org.springframework.boot.autoconfigure: DEBUG
-
 
 application:
   security:
