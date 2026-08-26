@@ -25,6 +25,12 @@ public class DownloadUtils {
         // TODO: handle 404 adding a flag in post (database)
         if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
             throw new FileNotFoundException("404 Not Found: " + urlStr);
+        } else if (responseCode == 429) {
+            String ra = connection.getHeaderField("Retry-After");
+            long delay = 2;
+            try { if (ra != null) delay = Long.parseLong(ra); } catch (NumberFormatException ignored) {}
+            connection.disconnect();
+            throw new RateLimitException("429 Too Many Requests for " + urlStr + ", retry in " + delay + "s", delay);
         } else if (responseCode != HttpURLConnection.HTTP_OK) {
             throw new IOException("Failed to download: HTTP " + responseCode + " for " + urlStr);
         }
