@@ -2,8 +2,10 @@ package com.example.redditvault.redditPost;
 
 import com.example.redditvault.subreddit.Subreddit;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
@@ -11,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+@ExtendWith(MockitoExtension.class)
 public class RedditPostServiceTests {
     @Mock
     private RedditPostRepository redditPostRepository;
