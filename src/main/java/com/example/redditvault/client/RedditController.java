@@ -85,7 +85,6 @@ public class RedditController {
     @PostMapping("/all-saved")
     public ResponseEntity<Map<String, String>> fetchAllUserSaved(@RequestBody User user) throws Exception {
         String jobId = UUID.randomUUID().toString();
-
         JobStatus job = new JobStatus();
         job.setJobId(jobId);
         job.setUsername(user.getUsername());

@@ -35,6 +35,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.example.redditvault.utils.RateLimitException;
 
 @Service
 public class RedditClientService {
@@ -209,13 +210,20 @@ public class RedditClientService {
                                                 .subscribeOn(Schedulers.boundedElastic());
 
                                 // Scrape media after save
-                                Mono<Void> scrapePost = scrapeMediaFromPost(item);
+                                Mono<Void> scrapePost = scrapeMediaFromPost(item)
+                                        .onErrorResume(e -> {
+                                            jsonLogger.info("Scrape failed for post " + item.getId() + ": " + e);
+                                            return Mono.empty();
+                                        });
 
                                 return saveSubreddit.then(savePost)
                                         .flatMap(saved -> scrapePost.thenReturn(saved))
-                                        ;
-                            });
-                });
+                                        .onErrorResume(e -> {
+                                            jsonLogger.info("Failed to process post " + item.getId() + ": " + e);
+                                            return Mono.empty();
+                                        });
+                            }, 1); // max 3 concurrent — tune this down if 429s persist
+                     });
     }
 
     private Mono<RedditResponse> fetchPage(String username, String accessToken, String after) {
@@ -226,12 +234,11 @@ public class RedditClientService {
                 .uri(url)
                 .headers(h -> {
                     h.setBearerAuth(accessToken);
-                    h.add("User-Agent", "Mozilla/5.0");
+                    h.add("User-Agent", "linux:test:v1.0 (by /u/33prova33)");
                 })
                 .retrieve()
                 .onStatus(status -> status.value() == 429,
                         (ClientResponse resp) -> Mono.defer(() -> {
-                            // Try to respect Retry-After if Reddit provides it
                             String ra = resp.headers().asHttpHeaders().getFirst("Retry-After");
                             long delay = 2;
                             try { if (ra != null) delay = Long.parseLong(ra); } catch (NumberFormatException ignored) {}
@@ -243,32 +250,23 @@ public class RedditClientService {
                     try {
                         return objectMapper.readValue(json, RedditResponse.class);
                     } catch (Exception e) {
+                        jsonLogger.info(String.valueOf(e));
                         throw new RuntimeException("Failed to parse Reddit response", e);
                     }
                 })
-                .delayElement(Duration.ofSeconds(1)) // gentle pacing between hits
+                .delayElement(Duration.ofSeconds(2)) // gentle pacing between hits
                 .retryWhen(
-                        Retry.max(3)
+                        Retry.max(5)
                                 .filter(ex -> ex instanceof RateLimitException)
                                 .transientErrors(true)
-                                .doBeforeRetry(rs -> {
-                                    if (rs.failure() instanceof RateLimitException rle) {
-                                        // delay per exception info
-                                        try { Thread.sleep(rle.delaySeconds() * 1000L); } catch (InterruptedException ignored) {}
-                                    }
+                                .doBeforeRetryAsync(rs -> {
+                                    long delay = (rs.failure() instanceof RateLimitException rle) ? rle.delaySeconds() : 2;
+                                    return Mono.delay(Duration.ofSeconds(delay)).then();
                                 })
                 );
     }
 
-    // Minimal custom exception to carry delay seconds
-    static class RateLimitException extends RuntimeException {
-        private final long delaySeconds;
-        RateLimitException(String msg, long delaySeconds) {
-            super(msg);
-            this.delaySeconds = delaySeconds;
-        }
-        long delaySeconds() { return delaySeconds; }
-    }
+
 
     @Async
     public void startFetchJob(String jobId, User user) throws Exception {
@@ -333,9 +331,8 @@ public class RedditClientService {
 
 
     public Mono<Void> scrapeMediaFromPost(RedditSavedItem post) {
-        //TODO: add a flag in database if empty
         if (post.getUrl() == null || post.getUrl().isEmpty()) return Mono.empty();
-        jsonLogger.info(post.getPermalink(),post.getUrl_overridden_by_dest(),post.getTitle());
+        jsonLogger.info(post.getPermalink(), post.getUrl_overridden_by_dest(), post.getTitle());
 
         MediaExtractorRegistry registry = new MediaExtractorRegistry();
         List<String> mediaUrls = registry.extract(post);
@@ -344,16 +341,30 @@ public class RedditClientService {
         //TODO: check if posts has been already downloaded
         if (!mediaUrls.isEmpty()) {
             return Flux.fromIterable(mediaUrls)
-                    .flatMap(mediaUrl -> {
-                        return Mono.fromRunnable(() -> {
-                            try {
-                                downloaderRegistry.downloadAll(post, List.of(mediaUrl));
-                            } catch (IOException e) {
-                                //TODO: handle exception with a logger
-                                throw new RuntimeException(e);
-                            }
-                        }).subscribeOn(Schedulers.boundedElastic());
-                    })
+                    .flatMap(mediaUrl ->
+                                    Mono.fromRunnable(() -> {
+                                                try {
+                                                    downloaderRegistry.downloadAll(post, List.of(mediaUrl));
+                                                } catch (IOException e) {
+                                                    throw new RuntimeException(e); // preserves cause, incl. RateLimitException
+                                                }
+                                            })
+                                            .subscribeOn(Schedulers.boundedElastic())
+                                            .retryWhen(
+                                                    Retry.max(5)
+                                                            .filter(ex -> ex.getCause() instanceof RateLimitException)
+                                                            .doBeforeRetryAsync(rs -> {
+                                                                long delay = (rs.failure().getCause() instanceof RateLimitException rle)
+                                                                        ? rle.delaySeconds() : 2;
+                                                                return Mono.delay(Duration.ofSeconds(delay)).then();
+                                                            })
+                                            )
+                                            .onErrorResume(e -> {
+                                                jsonLogger.info("Giving up on post id " + post.getId() + "media url" + mediaUrl + " after retries: " + e );
+                                                return Mono.empty();
+                                            })
+                            , 1) // one download at a time
+                    .delayElements(Duration.ofMillis(500))
                     .then();
         }
         return Mono.empty();
@@ -364,5 +375,4 @@ public class RedditClientService {
     private boolean isImage(String url) {
         return url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".gif");
     }
-
 }
