@@ -3,7 +3,9 @@ import React, { useEffect, useState } from "react";
 //import Stack from '@mui/material/Stack';
 
 type Subreddit = {
-    name: string;
+    "subredditId": string,
+    "name": string | null;
+    "redditPost": [];
 }
 
 function Subreddit() {
@@ -69,7 +71,7 @@ function Subreddit() {
             {
                 subreddits.map(
                     subreddit => (
-                        <p>{subreddit.name}</p>
+                        <p>{subreddit.subredditId}</p>
                     )
                 )
             }
